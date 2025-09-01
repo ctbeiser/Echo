@@ -149,8 +149,26 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        // Allow standard web/content schemes
-        if scheme == "http" || scheme == "https" || scheme == "about" || scheme == "data" {
+        // Only intercept explicit user link taps in the main frame
+        let isUserTap = navigationAction.navigationType == .linkActivated
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+
+        // Standard web/content schemes
+        if scheme == "http" || scheme == "https" {
+            if isUserTap && isMainFrame {
+                let host = url.host?.lowercased()
+                if Coordinator.isXOrTwitterHost(host) {
+                    decisionHandler(.allow)
+                } else {
+                    Coordinator.openExternal(url)
+                    decisionHandler(.cancel)
+                }
+                return
+            }
+            decisionHandler(.allow)
+            return
+        }
+        if scheme == "about" || scheme == "data" {
             decisionHandler(.allow)
             return
         }
@@ -173,9 +191,22 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        // Open target=_blank links in the same webView
+        // Handle target=_blank links
         if navigationAction.targetFrame == nil {
-            webView.load(navigationAction.request)
+            if let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() {
+                if scheme == "http" || scheme == "https" {
+                    let host = url.host?.lowercased()
+                    if Coordinator.isXOrTwitterHost(host) {
+                        webView.load(navigationAction.request)
+                    } else {
+                        Coordinator.openExternal(url)
+                    }
+                } else {
+                    webView.load(navigationAction.request)
+                }
+            } else {
+                webView.load(navigationAction.request)
+            }
         }
         return nil
     }
@@ -190,6 +221,15 @@ extension Coordinator {
     static var safariLikeUserAgent: String {
         // Modern iPhone Safari UA
         return "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+    }
+    static func isXOrTwitterHost(_ host: String?) -> Bool {
+        guard let host = host?.lowercased() else { return false }
+        return host == "x.com" || host == "www.x.com" || host == "mobile.x.com" || host == "twitter.com" || host == "www.twitter.com"
+    }
+    static func openExternal(_ url: URL) {
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
     }
     // Best-effort mapping from twitter:// or x:// deep links to web URLs on x.com
     static func mapTwitterDeepLinkToHTTPS(url: URL) -> URL? {
