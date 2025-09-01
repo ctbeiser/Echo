@@ -163,7 +163,16 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        // Open target=_blank links in the same webView
+        if navigationAction.targetFrame == nil {
+            webView.load(navigationAction.request)
+        }
         return nil
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        // Recover from WebContent process crashes by reloading
+        webView.reload()
     }
 }
 
