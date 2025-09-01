@@ -118,6 +118,15 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         #if DEBUG
         print("Navigation finished: \(webView.url?.absoluteString ?? "<nil>")")
         #endif
+        // If the user lands on the Home timeline, bounce them to Notifications
+        if let currentURL = webView.url,
+           let host = currentURL.host?.lowercased(),
+           (host == "x.com" || host == "www.x.com"),
+           currentURL.path.lowercased() == "/home" {
+            DispatchQueue.main.async {
+                webView.load(URLRequest(url: URL(string: "https://x.com/notifications")!))
+            }
+        }
         if !didInstallContentRules {
             didInstallContentRules = true
             ContentBlocker.installRuleList(into: webView, completion: nil)
@@ -234,7 +243,7 @@ extension Coordinator {
 // MARK: - Content Blocker Management
 
 enum ContentBlocker {
-    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v2"
+    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v5"
 
     static func installRuleList(into webView: WKWebView, completion: ((Bool) -> Void)? = nil) {
         let store = WKContentRuleListStore.default()
@@ -277,6 +286,15 @@ enum ContentBlocker {
         "action": {
           "type": "css-display-none",
           "selector": "[aria-label='Home']"
+        }
+      },
+      {
+        "trigger": {
+          "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+          "type": "css-display-none",
+          "selector": "[aria-label='Timeline: Your Home Timeline']"
         }
       }
     ]
