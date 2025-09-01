@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "ctbeiser_white_dove_flying_ultrahigh_contrast_zoomed_in_bokeh_baa94df4-0f88-4cc1-a98f-e2f4b18333f7_3.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "dovehalf.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

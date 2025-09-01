@@ -15,8 +15,8 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            WebView(url: URL(string: "https://x.com")!, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
-                .ignoresSafeArea()
+            WebView(url: URL(string: "https://x.com/notifications")!, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
+                .ignoresSafeArea(edges: [.bottom])
 
             if isLoading {
                 ProgressView()
@@ -56,6 +56,7 @@ struct WebView: UIViewRepresentable {
         configuration.defaultWebpagePreferences.preferredContentMode = .mobile
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.preferences.javaScriptEnabled = true
+        configuration.allowsInlineMediaPlayback = true
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -233,7 +234,7 @@ extension Coordinator {
 // MARK: - Content Blocker Management
 
 enum ContentBlocker {
-    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules"
+    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v2"
 
     static func installRuleList(into webView: WKWebView, completion: ((Bool) -> Void)? = nil) {
         let store = WKContentRuleListStore.default()
@@ -275,15 +276,8 @@ enum ContentBlocker {
         },
         "action": {
           "type": "css-display-none",
-          "selector": "aside[aria-label='Who to follow'], section[aria-label^='Timeline: Trending'], [data-testid='sidebarColumn']"
+          "selector": "[aria-label='Home']"
         }
-      },
-      {
-        "trigger": {
-          "url-filter": ".*/i/premium.*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": { "type": "block" }
       }
     ]
     """
