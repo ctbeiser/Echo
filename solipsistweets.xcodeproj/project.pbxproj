@@ -10,9 +10,22 @@
 		160494062E6507430073407B /* solipsistweets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = solipsistweets.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		165A12742E7D222B0021ED67 /* Exceptions for "solipsistweets" folder in "solipsistweets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 160494052E6507430073407B /* solipsistweets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		160494082E6507430073407B /* solipsistweets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				165A12742E7D222B0021ED67 /* Exceptions for "solipsistweets" folder in "solipsistweets" target */,
+			);
 			path = solipsistweets;
 			sourceTree = "<group>";
 		};
@@ -254,7 +267,13 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = solipsistweets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=macosx*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=xros*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -299,7 +318,13 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = solipsistweets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=macosx*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=xros*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

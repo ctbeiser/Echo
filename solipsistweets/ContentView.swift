@@ -10,12 +10,13 @@ import UIKit
 import WebKit
 
 struct ContentView: View {
+    @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
     @State private var lastErrorDescription: String? = nil
 
     var body: some View {
         ZStack {
-            WebView(url: URL(string: "https://x.com/notifications")!, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
+            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
                 .ignoresSafeArea(edges: [.bottom])
 
             if isLoading {
@@ -39,7 +40,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!))
 }
 
 // MARK: - WebView Wrapper
@@ -70,7 +71,12 @@ struct WebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // No-op: avoid interrupting provisional loads
+        // Only navigate when the requested URL changes meaningfully
+        let current = webView.url?.absoluteString
+        let target = url.absoluteString
+        if current != target {
+            webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30))
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -186,6 +192,15 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
+        // Handle echodotapp:// custom links by mapping to https://x.com/...
+        if scheme == "echodotapp" {
+            if let mapped = Coordinator.mapEchoDotAppToHTTPS(url: url) {
+                webView.load(URLRequest(url: mapped))
+            }
+            decisionHandler(.cancel)
+            return
+        }
+
         // Allow all other schemes (no external open here to keep things simple)
         decisionHandler(.allow)
     }
@@ -278,12 +293,50 @@ extension Coordinator {
 
         return nil
     }
+
+    // Map echodotapp:// to https://x.com by directly copying path/query/fragment after x.com.
+    // Supported forms:
+    // - echodotapp://x.com/<path>?<query>#<fragment>
+    // - echodotapp:/// <path>?<query>#<fragment>
+    // Notes:
+    // - No username or other special handling. For exact pass-through, include x.com or start with a leading slash.
+    static func mapEchoDotAppToHTTPS(url: URL) -> URL? {
+        guard let incoming = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return URL(string: "https://x.com")
+        }
+        let lowerHost = incoming.host?.lowercased()
+        let isXHost = lowerHost == "x.com" || lowerHost == "www.x.com" || lowerHost == "mobile.x.com"
+
+        // If host is x.com (or empty), copy path as-is. Otherwise, treat host as first path segment.
+        let pathAfterX: String
+        if isXHost || lowerHost == nil {
+            pathAfterX = incoming.path
+        } else {
+            let hostSegment = incoming.host ?? ""
+            // Ensure exactly one slash between host and existing path
+            if incoming.path.hasPrefix("/") {
+                pathAfterX = "/" + hostSegment + incoming.path
+            } else if incoming.path.isEmpty {
+                pathAfterX = "/" + hostSegment
+            } else {
+                pathAfterX = "/" + hostSegment + "/" + incoming.path
+            }
+        }
+
+        var comps = URLComponents()
+        comps.scheme = "https"
+        comps.host = "x.com"
+        comps.path = pathAfterX
+        comps.queryItems = incoming.queryItems
+        comps.fragment = incoming.fragment
+        return comps.url ?? URL(string: "https://x.com")
+    }
 }
 
 // MARK: - Content Blocker Management
 
 enum ContentBlocker {
-    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v5"
+    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v11"
 
     static func installRuleList(into webView: WKWebView, completion: ((Bool) -> Void)? = nil) {
         let store = WKContentRuleListStore.default()
@@ -330,11 +383,62 @@ enum ContentBlocker {
       },
       {
         "trigger": {
+          "url-filter": ".*",
+          "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+          "type": "css-display-none",
+          "selector": "[aria-label='SuperGrok']"
+        }
+      },
+      {
+        "trigger": {
+            "url-filter": ".*",
+            "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+            "type": "css-display-none",
+            "selector": "[aria-label='Grok']"
+        }
+      },
+      {
+        "trigger": {
+          "url-filter": ".*",
+          "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+          "type": "css-display-none",
+          "selector": "[aria-label='Premium']"
+        }
+      },
+      {
+        "trigger": {
+          "url-filter": ".*",
+          "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+          "type": "css-display-none",
+          "selector": "[aria-label='Communities']"
+        }
+      },
+      {
+        "trigger": {
+          "url-filter": ".*",
           "if-domain": ["x.com", "twitter.com"]
         },
         "action": {
           "type": "css-display-none",
           "selector": "[aria-label='Timeline: Your Home Timeline']"
+        }
+      },
+      {
+        "trigger": {
+          "url-filter": ".*",
+          "if-domain": ["x.com", "twitter.com"]
+        },
+        "action": {
+          "type": "css-display-none",
+          "selector": "[aria-label='Timeline: Explore']"
         }
       }
     ]
