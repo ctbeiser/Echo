@@ -13,11 +13,15 @@ struct ContentView: View {
     @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
     @State private var lastErrorDescription: String? = nil
+    @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
             WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
                 .ignoresSafeArea(edges: [.bottom])
+
+            // (Moved pill into .safeAreaInset at bottom)
 
             if isLoading {
                 ProgressView()
@@ -36,8 +40,47 @@ struct ContentView: View {
                 .allowsHitTesting(false)
             }
         }
+        .overlay {
+            if screenTimeTracker.secondsToday >= 20 * 60 {
+                ZStack {
+                    HStack {
+                        Spacer()
+                        Text(formatDuration(screenTimeTracker.secondsToday))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule().fill(colorScheme == .dark ? Color.black : Color.white)
+                            )
+                            .overlay(
+                                Capsule().stroke((colorScheme == .dark ? Color.white : Color.black).opacity(0.08), lineWidth: 0.5)
+                            )
+                            // .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 1)
+                        Spacer()
+                    }
+                    .padding(.bottom, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+                .ignoresSafeArea()
+            }
+        }
     }
 }
+// MARK: - Duration formatting
+
+private func formatDuration(_ seconds: TimeInterval) -> String {
+    let totalSeconds = max(0, Int(seconds.rounded()))
+    let hours = totalSeconds / 3600
+    let minutes = (totalSeconds % 3600) / 60
+    let secs = totalSeconds % 60
+    if hours > 0 {
+        return String(format: "%d:%02d:%02d", hours, minutes, secs)
+    } else {
+        return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
 
 #Preview {
     ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!))
