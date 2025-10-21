@@ -1,8 +1,6 @@
 //
 //  ContentView.swift
-//  solipsistweets
-//
-//  Created by Chris Beiser on 8/31/25.
+//  solipsistweets / Orion (shared)
 //
 
 import SwiftUI
@@ -15,13 +13,12 @@ struct ContentView: View {
     @State private var lastErrorDescription: String? = nil
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
+    let profile: SiteProfile
 
     var body: some View {
         ZStack {
-            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription)
+            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, profile: profile)
                 .ignoresSafeArea(edges: [.bottom])
-
-            // (Moved pill into .safeAreaInset at bottom)
 
             if isLoading {
                 ProgressView()
@@ -56,7 +53,6 @@ struct ContentView: View {
                             .overlay(
                                 Capsule().stroke((colorScheme == .dark ? Color.white : Color.black).opacity(0.08), lineWidth: 0.5)
                             )
-                            // .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 1)
                         Spacer()
                     }
                     .padding(.bottom, 16)
@@ -67,6 +63,7 @@ struct ContentView: View {
         }
     }
 }
+
 // MARK: - Duration formatting
 
 private func formatDuration(_ seconds: TimeInterval) -> String {
@@ -81,9 +78,9 @@ private func formatDuration(_ seconds: TimeInterval) -> String {
     }
 }
 
-
 #Preview {
-    ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!))
+    ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!), profile: XSiteProfile())
+        .environmentObject(OnScreenTimeTracker())
 }
 
 // MARK: - WebView Wrapper
@@ -92,11 +89,13 @@ struct WebView: UIViewRepresentable {
     let url: URL
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
+    let profile: SiteProfile
+
     typealias UIViewType = WKWebView
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default() // persistent cookies and storage
+        configuration.websiteDataStore = .default()
         configuration.defaultWebpagePreferences.preferredContentMode = .mobile
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.preferences.javaScriptEnabled = true
@@ -106,15 +105,14 @@ struct WebView: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
-        webView.customUserAgent = Coordinator.safariLikeUserAgent
+        webView.customUserAgent = profile.userAgent
 
-        // Load requested URL first (don't mutate SwiftUI state here)
+        // Load requested URL first
         webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30))
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // Only navigate when the requested URL changes meaningfully
         let current = webView.url?.absoluteString
         let target = url.absoluteString
         if current != target {
@@ -123,18 +121,19 @@ struct WebView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
+        Coordinator(parent: self, profile: profile)
     }
 }
 
 final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var parent: WebView
-    private var didApplyNonHTTPSFallback: Bool = false
+    private let profile: SiteProfile
     private var didInstallContentRules: Bool = false
     private var didPerformExternalRedirectFallback: Bool = false
 
-    init(parent: WebView) {
+    init(parent: WebView, profile: SiteProfile) {
         self.parent = parent
+        self.profile = profile
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -167,18 +166,10 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         #if DEBUG
         print("Navigation finished: \(webView.url?.absoluteString ?? "<nil>")")
         #endif
-        // If the user lands on the Home timeline, bounce them to Notifications
-        if let currentURL = webView.url,
-           let host = currentURL.host?.lowercased(),
-           (host == "x.com" || host == "www.x.com"),
-           currentURL.path.lowercased() == "/home" {
-            DispatchQueue.main.async {
-                webView.load(URLRequest(url: URL(string: "https://x.com/notifications")!))
-            }
-        }
+
         if !didInstallContentRules {
             didInstallContentRules = true
-            ContentBlocker.installRuleList(into: webView, completion: nil)
+            ContentBlocker.installRuleList(into: webView, identifier: profile.contentBlockerIdentifier, rulesJSON: profile.contentBlockerRulesJSON, completion: nil)
         }
         DispatchQueue.main.async { [weak self] in
             self?.parent.lastErrorDescription = nil
@@ -192,21 +183,19 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        // Cancel x-safari-* app-bounce attempts to avoid reload loops
+        // Cancel known app-bounce attempts from X app only for X profile; Reddit doesn’t use these
         if scheme == "x-safari-http" || scheme == "x-safari-https" {
             decisionHandler(.cancel)
             return
         }
 
-        // Only intercept explicit user link taps in the main frame
         let isUserTap = navigationAction.navigationType == .linkActivated
         let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
 
-        // Standard web/content schemes
         if scheme == "http" || scheme == "https" {
             if isUserTap && isMainFrame {
                 let host = url.host?.lowercased()
-                if Coordinator.isXOrTwitterHost(host) {
+                if let host = host, profile.canonicalHosts.contains(host) {
                     decisionHandler(.allow)
                 } else {
                     Coordinator.openExternal(url)
@@ -222,29 +211,22 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        // Handle twitter:// or x:// deep links by mapping to https once
-        if scheme == "twitter" || scheme == "x" {
-            if let url = navigationAction.request.url,
-               let mapped = Coordinator.mapTwitterDeepLinkToHTTPS(url: url) {
-                webView.load(URLRequest(url: mapped))
-            } else if !didPerformExternalRedirectFallback {
-                didPerformExternalRedirectFallback = true
-                webView.load(URLRequest(url: URL(string: "https://x.com")!))
-            }
+        // Map custom schemes to https if profile supports it
+        if let mapped = profile.mapDeepLinkToHTTPS(url) {
+            webView.load(URLRequest(url: mapped))
             decisionHandler(.cancel)
             return
         }
 
-        // Handle echodotapp:// custom links by mapping to https://x.com/...
+        // echodotapp:// mapping (kept same behavior by default)
         if scheme == "echodotapp" {
-            if let mapped = Coordinator.mapEchoDotAppToHTTPS(url: url) {
+            if let mapped = profile.mapEchoDotAppToHTTPS(url) {
                 webView.load(URLRequest(url: mapped))
             }
             decisionHandler(.cancel)
             return
         }
 
-        // Allow all other schemes (no external open here to keep things simple)
         decisionHandler(.allow)
     }
 
@@ -254,7 +236,7 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             if let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() {
                 if scheme == "http" || scheme == "https" {
                     let host = url.host?.lowercased()
-                    if Coordinator.isXOrTwitterHost(host) {
+                    if let host = host, profile.canonicalHosts.contains(host) {
                         webView.load(navigationAction.request)
                     } else {
                         Coordinator.openExternal(url)
@@ -270,26 +252,18 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        // Recover from WebContent process crashes by reloading
         webView.reload()
     }
 }
 
 extension Coordinator {
-    static var safariLikeUserAgent: String {
-        // Modern iPhone Safari UA
-        return "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
-    }
-    static func isXOrTwitterHost(_ host: String?) -> Bool {
-        guard let host = host?.lowercased() else { return false }
-        return host == "x.com" || host == "www.x.com" || host == "mobile.x.com" || host == "twitter.com" || host == "www.twitter.com"
-    }
     static func openExternal(_ url: URL) {
         DispatchQueue.main.async {
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
     }
-    // Best-effort mapping from twitter:// or x:// deep links to web URLs on x.com
+
+    // Existing helpers kept for X profile
     static func mapTwitterDeepLinkToHTTPS(url: URL) -> URL? {
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
@@ -298,33 +272,21 @@ extension Coordinator {
             queryItems?.first(where: { $0.name.lowercased() == name })?.value
         }
 
-        // Common patterns
-        // twitter://user?screen_name=username
         if host == "user", let screenName = valueFor("screen_name"), !screenName.isEmpty {
             return URL(string: "https://x.com/\(screenName)")
         }
-
-        // twitter://status?id=123 or twitter://tweet?id=123
         if (host == "status" || host == "tweet"), let id = valueFor("id"), !id.isEmpty {
             return URL(string: "https://x.com/i/web/status/\(id)")
         }
-
-        // twitter://messages -> DMs
         if host == "messages" || path == "/messages" {
             return URL(string: "https://x.com/messages")
         }
-
-        // twitter://timeline -> home
         if host == "timeline" || path == "/timeline" || path == "/home" {
             return URL(string: "https://x.com/home")
         }
-
-        // twitter://search?query=...
         if host == "search", let q = valueFor("query"), let encoded = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             return URL(string: "https://x.com/search?q=\(encoded)")
         }
-
-        // twitter://intent/tweet?... or x://intent/tweet
         if host == "intent" || path.starts(with: "/intent/") {
             var comps = URLComponents()
             comps.scheme = "https"
@@ -333,16 +295,9 @@ extension Coordinator {
             comps.queryItems = queryItems
             return comps.url
         }
-
         return nil
     }
 
-    // Map echodotapp:// to https://x.com by directly copying path/query/fragment after x.com.
-    // Supported forms:
-    // - echodotapp://x.com/<path>?<query>#<fragment>
-    // - echodotapp:/// <path>?<query>#<fragment>
-    // Notes:
-    // - No username or other special handling. For exact pass-through, include x.com or start with a leading slash.
     static func mapEchoDotAppToHTTPS(url: URL) -> URL? {
         guard let incoming = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return URL(string: "https://x.com")
@@ -350,13 +305,11 @@ extension Coordinator {
         let lowerHost = incoming.host?.lowercased()
         let isXHost = lowerHost == "x.com" || lowerHost == "www.x.com" || lowerHost == "mobile.x.com"
 
-        // If host is x.com (or empty), copy path as-is. Otherwise, treat host as first path segment.
         let pathAfterX: String
         if isXHost || lowerHost == nil {
             pathAfterX = incoming.path
         } else {
             let hostSegment = incoming.host ?? ""
-            // Ensure exactly one slash between host and existing path
             if incoming.path.hasPrefix("/") {
                 pathAfterX = "/" + hostSegment + incoming.path
             } else if incoming.path.isEmpty {
@@ -379,12 +332,10 @@ extension Coordinator {
 // MARK: - Content Blocker Management
 
 enum ContentBlocker {
-    private static let ruleListIdentifier = "com.solipsistweets.ContentBlocker.rules.v11"
-
-    static func installRuleList(into webView: WKWebView, completion: ((Bool) -> Void)? = nil) {
+    static func installRuleList(into webView: WKWebView, identifier: String, rulesJSON: String, completion: ((Bool) -> Void)? = nil) {
         let store = WKContentRuleListStore.default()
 
-        store?.lookUpContentRuleList(forIdentifier: ruleListIdentifier) { existing, error in
+        store?.lookUpContentRuleList(forIdentifier: identifier) { existing, error in
             if let error = error {
                 #if DEBUG
                 print("Rule list lookup error: \(error.localizedDescription)")
@@ -396,8 +347,8 @@ enum ContentBlocker {
                 return
             }
 
-            store?.compileContentRuleList(forIdentifier: ruleListIdentifier,
-                                          encodedContentRuleList: defaultRulesJSON) { compiled, error in
+            store?.compileContentRuleList(forIdentifier: identifier,
+                                          encodedContentRuleList: rulesJSON) { compiled, error in
                 if let error = error {
                     #if DEBUG
                     print("Rule list compile error: \(error.localizedDescription)")
@@ -410,79 +361,36 @@ enum ContentBlocker {
         }
     }
 
-    // Default content blocking rules for x.com/twitter.com.
-    // You can extend the selectors and rules below as needed.
-    private static let defaultRulesJSON = """
+    // Keep the original X/Twitter rules available for XSiteProfile
+    static let defaultRulesJSON = """
     [
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='Home']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Home']" }
       },
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='SuperGrok']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='SuperGrok']" }
       },
       {
-        "trigger": {
-            "url-filter": ".*",
-            "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-            "type": "css-display-none",
-            "selector": "[aria-label='Grok']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Grok']" }
       },
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='Premium']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Premium']" }
       },
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='Communities']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Communities']" }
       },
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='Timeline: Your Home Timeline']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Timeline: Your Home Timeline']" }
       },
       {
-        "trigger": {
-          "url-filter": ".*",
-          "if-domain": ["x.com", "twitter.com"]
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "[aria-label='Timeline: Explore']"
-        }
+        "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Timeline: Explore']" }
       }
     ]
     """

@@ -1,0 +1,37 @@
+{
+  "images" : [
+    {
+      "filename" : "Chris_Beiser_Alien_xenomorph_with_giant_glistening_fangs_ultr_3d3273d3-a100-45c1-a593-59cba7ecf6b5_0.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "Chris_Beiser_Alien_xenomorph_with_giant_glistening_fangs_on_b_f2ac021b-a5c3-4b78-beb6-2be2d641b29a_0.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
