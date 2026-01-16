@@ -98,11 +98,11 @@ struct WebView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         configuration.defaultWebpagePreferences.preferredContentMode = .mobile
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
-        configuration.preferences.javaScriptEnabled = true
         configuration.allowsInlineMediaPlayback = true
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
+        webView.isInspectable = true
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.customUserAgent = profile.userAgent
