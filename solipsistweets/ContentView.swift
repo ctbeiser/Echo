@@ -8,6 +8,7 @@ import UIKit
 import WebKit
 
 struct ContentView: View {
+    private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
     @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
     @State private var lastErrorDescription: String? = nil
@@ -24,43 +25,45 @@ struct ContentView: View {
                 ProgressView()
                     .progressViewStyle(.circular)
             }
-
-            if let lastErrorDescription = lastErrorDescription {
-                VStack {
-                    Spacer()
-                    Text(lastErrorDescription)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 8)
-                }
-                .padding()
-                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottom) {
+            if let lastErrorDescription {
+                Text(lastErrorDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+                    .padding(.horizontal)
+                    .allowsHitTesting(false)
             }
         }
-        .overlay {
-            if screenTimeTracker.secondsToday >= 20 * 60 {
-                ZStack {
-                    HStack {
-                        Spacer()
-                        Text(formatDuration(screenTimeTracker.secondsToday))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule().fill(colorScheme == .dark ? Color.black : Color.white)
-                            )
-                            .overlay(
-                                Capsule().stroke((colorScheme == .dark ? Color.white : Color.black).opacity(0.08), lineWidth: 0.5)
-                            )
-                        Spacer()
-                    }
+        .overlay(alignment: .bottom) {
+            if shouldShowScreenTimeBadge {
+                Text(formatDuration(screenTimeTracker.secondsToday))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(badgeForegroundColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(badgeBackgroundColor))
+                    .overlay(
+                        Capsule().stroke(badgeForegroundColor.opacity(0.08), lineWidth: 0.5)
+                    )
                     .padding(.bottom, 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                }
-                .ignoresSafeArea()
+                    .frame(maxWidth: .infinity)
+                    .ignoresSafeArea(edges: [.bottom])
             }
         }
+    }
+
+    private var shouldShowScreenTimeBadge: Bool {
+        screenTimeTracker.secondsToday >= screenTimeBadgeThreshold
+    }
+
+    private var badgeForegroundColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var badgeBackgroundColor: Color {
+        colorScheme == .dark ? .black : .white
     }
 }
 
@@ -86,6 +89,7 @@ private func formatDuration(_ seconds: TimeInterval) -> String {
 // MARK: - WebView Wrapper
 
 struct WebView: UIViewRepresentable {
+    private static let requestTimeout: TimeInterval = 30
     let url: URL
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
@@ -107,29 +111,32 @@ struct WebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.customUserAgent = profile.userAgent
 
-        // Load requested URL first
-        webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30))
+        load(url, in: webView)
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        let current = webView.url?.absoluteString
-        let target = url.absoluteString
-        if current != target {
-            webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30))
-        }
+        guard webView.url?.absoluteString != url.absoluteString else { return }
+        load(url, in: webView)
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self, profile: profile)
     }
+
+    private func load(_ url: URL, in webView: WKWebView) {
+        webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: Self.requestTimeout))
+    }
 }
 
 final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    private static let webSchemes: Set<String> = ["http", "https"]
+    private static let safeInlineSchemes: Set<String> = ["about", "data"]
+    private static let cancelledAppBounceSchemes: Set<String> = ["x-safari-http", "x-safari-https"]
+
     private var parent: WebView
     private let profile: SiteProfile
     private var didInstallContentRules: Bool = false
-    private var didPerformExternalRedirectFallback: Bool = false
 
     init(parent: WebView, profile: SiteProfile) {
         self.parent = parent
@@ -143,23 +150,11 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        #if DEBUG
-        print("Navigation failed: \(error.localizedDescription)")
-        #endif
-        DispatchQueue.main.async { [weak self] in
-            self?.parent.lastErrorDescription = error.localizedDescription
-            self?.parent.isLoading = false
-        }
+        handleNavigationFailure(error, prefix: "Navigation failed")
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        #if DEBUG
-        print("Provisional navigation failed: \(error.localizedDescription)")
-        #endif
-        DispatchQueue.main.async { [weak self] in
-            self?.parent.lastErrorDescription = error.localizedDescription
-            self?.parent.isLoading = false
-        }
+        handleNavigationFailure(error, prefix: "Provisional navigation failed")
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -183,30 +178,17 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        // Cancel known app-bounce attempts from X app only for X profile; Reddit doesn’t use these
-        if scheme == "x-safari-http" || scheme == "x-safari-https" {
+        if Self.cancelledAppBounceSchemes.contains(scheme) {
             decisionHandler(.cancel)
             return
         }
 
-        let isUserTap = navigationAction.navigationType == .linkActivated
-        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
-
-        if scheme == "http" || scheme == "https" {
-            if isUserTap && isMainFrame {
-                let host = url.host?.lowercased()
-                if let host = host, profile.canonicalHosts.contains(host) {
-                    decisionHandler(.allow)
-                } else {
-                    Coordinator.openExternal(url)
-                    decisionHandler(.cancel)
-                }
-                return
-            }
-            decisionHandler(.allow)
+        if Self.webSchemes.contains(scheme) {
+            handleHTTPNavigation(url, action: navigationAction, decisionHandler: decisionHandler)
             return
         }
-        if scheme == "about" || scheme == "data" {
+
+        if Self.safeInlineSchemes.contains(scheme) {
             decisionHandler(.allow)
             return
         }
@@ -231,28 +213,59 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        // Handle target=_blank links
-        if navigationAction.targetFrame == nil {
-            if let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() {
-                if scheme == "http" || scheme == "https" {
-                    let host = url.host?.lowercased()
-                    if let host = host, profile.canonicalHosts.contains(host) {
-                        webView.load(navigationAction.request)
-                    } else {
-                        Coordinator.openExternal(url)
-                    }
-                } else {
-                    webView.load(navigationAction.request)
-                }
-            } else {
-                webView.load(navigationAction.request)
-            }
+        guard navigationAction.targetFrame == nil else {
+            return nil
+        }
+
+        guard let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() else {
+            webView.load(navigationAction.request)
+            return nil
+        }
+
+        if Self.webSchemes.contains(scheme), !isInternalHost(url) {
+            Coordinator.openExternal(url)
+        } else {
+            webView.load(navigationAction.request)
         }
         return nil
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         webView.reload()
+    }
+}
+
+private extension Coordinator {
+    func handleNavigationFailure(_ error: Error, prefix: String) {
+        #if DEBUG
+        print("\(prefix): \(error.localizedDescription)")
+        #endif
+        DispatchQueue.main.async { [weak self] in
+            self?.parent.lastErrorDescription = error.localizedDescription
+            self?.parent.isLoading = false
+        }
+    }
+
+    func handleHTTPNavigation(_ url: URL, action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        let isUserTap = action.navigationType == .linkActivated
+        let isMainFrame = action.targetFrame?.isMainFrame ?? true
+
+        guard isUserTap && isMainFrame else {
+            decisionHandler(.allow)
+            return
+        }
+
+        if isInternalHost(url) {
+            decisionHandler(.allow)
+        } else {
+            Coordinator.openExternal(url)
+            decisionHandler(.cancel)
+        }
+    }
+
+    func isInternalHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return profile.canonicalHosts.contains(host)
     }
 }
 
