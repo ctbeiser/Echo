@@ -11,13 +11,20 @@ struct OrionApp: App {
         WindowGroup {
             ContentView(requestedURL: $requestedURL, profile: profile)
                 .environmentObject(screenTimeTracker)
+                .onAppear {
+                    updateTracking(for: scenePhase)
+                }
         }
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            if newPhase == .active {
-                screenTimeTracker.start()
-            } else {
-                screenTimeTracker.stopAndFlush()
-            }
+        .onChange(of: scenePhase) { _, newPhase in
+            updateTracking(for: newPhase)
+        }
+    }
+
+    private func updateTracking(for phase: ScenePhase) {
+        if phase == .active {
+            screenTimeTracker.start()
+        } else {
+            screenTimeTracker.stopAndFlush()
         }
     }
 }

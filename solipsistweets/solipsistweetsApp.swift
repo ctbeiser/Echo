@@ -4,8 +4,6 @@
 //
 
 import SwiftUI
-import UIKit
-import Combine
 
 @main
 struct solipsistweetsApp: App {
@@ -25,18 +23,19 @@ struct solipsistweetsApp: App {
                     }
                 }
                 .onAppear {
-                    if scenePhase == .active {
-                        screenTimeTracker.start()
-                    }
+                    updateTracking(for: scenePhase)
                 }
         }
-        .onChange(of: scenePhase) { newPhase in
-            if newPhase == .active {
-                screenTimeTracker.start()
-            } else {
-                screenTimeTracker.stopAndFlush()
-            }
+        .onChange(of: scenePhase) { _, newPhase in
+            updateTracking(for: newPhase)
+        }
+    }
+
+    private func updateTracking(for phase: ScenePhase) {
+        if phase == .active {
+            screenTimeTracker.start()
+        } else {
+            screenTimeTracker.stopAndFlush()
         }
     }
 }
-

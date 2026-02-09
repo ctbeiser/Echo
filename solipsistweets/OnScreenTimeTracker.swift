@@ -2,6 +2,8 @@ import Foundation
 import Combine
 
 final class OnScreenTimeTracker: ObservableObject {
+    private static let keyPrefix = "onScreenSeconds_"
+
     @Published var secondsToday: TimeInterval = 0
     private var timer: Timer?
     private var lastTickDate: Date?
@@ -83,7 +85,7 @@ final class OnScreenTimeTracker: ObservableObject {
     }
 
     static func key(for date: Date) -> String {
-        return "onScreenSeconds_" + Self.dayString(from: date)
+        "\(Self.keyPrefix)\(Self.dayString(from: date))"
     }
 
     private static let dayFormatter: DateFormatter = {
@@ -96,6 +98,6 @@ final class OnScreenTimeTracker: ObservableObject {
     }()
 
     private static func dayString(from date: Date) -> String {
-        return dayFormatter.string(from: date)
+        dayFormatter.string(from: date)
     }
 }
