@@ -36,7 +36,7 @@ struct ContentView: View {
                     .allowsHitTesting(false)
             }
         }
-        .overlay(alignment: .bottom) {
+        .overlay {
             if shouldShowScreenTimeBadge {
                 Text(formatDuration(screenTimeTracker.secondsToday))
                     .font(.caption.weight(.semibold))
@@ -48,8 +48,14 @@ struct ContentView: View {
                         Capsule().stroke(badgeForegroundColor.opacity(0.08), lineWidth: 0.5)
                     )
                     .padding(.bottom, 16)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: [.bottom])
+                    .onTapGesture {
+                        UIControl().sendAction(#selector(NSXPCConnection.suspend),
+                                               to: UIApplication.shared,
+                                               for: nil)
+
+                    }
             }
         }
     }
