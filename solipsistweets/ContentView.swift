@@ -6,12 +6,19 @@
 import SwiftUI
 import UIKit
 import WebKit
+import CoreMotion
+import Combine
 
 struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
+    private static let testFlightURL = URL(string: "https://testflight.apple.com/join/N3DtJcgD")!
     @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
     @State private var lastErrorDescription: String? = nil
+    @StateObject private var shakeDetector = ShakeDetector()
+    @State private var showShareBanner = false
+    @State private var isShareSheetPresented = false
+    @State private var hideShareBannerTask: Task<Void, Never>?
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
     let profile: SiteProfile
@@ -52,6 +59,42 @@ struct ContentView: View {
                     .ignoresSafeArea(edges: [.bottom])
             }
         }
+        .overlay(alignment: .top) {
+            if showShareBanner {
+                Button {
+                    isShareSheetPresented = true
+                    dismissShareBanner()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Share TestFlight")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .foregroundStyle(.primary)
+                    .background(.regularMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+                .padding(.horizontal, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .onAppear {
+            shakeDetector.start()
+        }
+        .onDisappear {
+            shakeDetector.stop()
+            hideShareBannerTask?.cancel()
+        }
+        .onChange(of: shakeDetector.shakeCount) { _, _ in
+            presentShareBanner()
+        }
+        .sheet(isPresented: $isShareSheetPresented) {
+            ShareSheet(activityItems: [Self.testFlightURL])
+        }
     }
 
     private var shouldShowScreenTimeBadge: Bool {
@@ -64,6 +107,35 @@ struct ContentView: View {
 
     private var badgeBackgroundColor: Color {
         colorScheme == .dark ? .black : .white
+    }
+
+    private func presentShareBanner() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+            showShareBanner = true
+        }
+        scheduleShareBannerDismissal()
+    }
+
+    private func dismissShareBanner() {
+        hideShareBannerTask?.cancel()
+        hideShareBannerTask = nil
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showShareBanner = false
+        }
+    }
+
+    private func scheduleShareBannerDismissal(after seconds: TimeInterval = 3.5) {
+        hideShareBannerTask?.cancel()
+        hideShareBannerTask = Task {
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showShareBanner = false
+                }
+                hideShareBannerTask = nil
+            }
+        }
     }
 }
 
@@ -84,6 +156,51 @@ private func formatDuration(_ seconds: TimeInterval) -> String {
 #Preview {
     ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!), profile: XSiteProfile())
         .environmentObject(OnScreenTimeTracker())
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+final class ShakeDetector: ObservableObject {
+    @Published private(set) var shakeCount: Int = 0
+
+    private let motionManager = CMMotionManager()
+    private var lastShakeAt: Date = .distantPast
+    private let shakeThreshold: Double = 2.2
+    private let shakeCooldown: TimeInterval = 1.0
+
+    func start() {
+        guard motionManager.isDeviceMotionAvailable else { return }
+        guard !motionManager.isDeviceMotionActive else { return }
+
+        motionManager.deviceMotionUpdateInterval = 1.0 / 35.0
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self, let motion else { return }
+            let accel = motion.userAcceleration
+            let magnitude = sqrt((accel.x * accel.x) + (accel.y * accel.y) + (accel.z * accel.z))
+            guard magnitude >= self.shakeThreshold else { return }
+
+            let now = Date()
+            guard now.timeIntervalSince(self.lastShakeAt) >= self.shakeCooldown else { return }
+            self.lastShakeAt = now
+            self.shakeCount += 1
+        }
+    }
+
+    func stop() {
+        motionManager.stopDeviceMotionUpdates()
+    }
+
+    deinit {
+        motionManager.stopDeviceMotionUpdates()
+    }
 }
 
 // MARK: - WebView Wrapper
