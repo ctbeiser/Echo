@@ -234,12 +234,16 @@ struct WebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.customUserAgent = profile.userAgent
 
+        context.coordinator.updateParent(self)
+        context.coordinator.recordProgrammaticRequest(url)
         load(url, in: webView)
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        guard webView.url?.absoluteString != url.absoluteString else { return }
+        context.coordinator.updateParent(self)
+        guard context.coordinator.shouldApplyProgrammaticRequest(url) else { return }
+        context.coordinator.recordProgrammaticRequest(url)
         load(url, in: webView)
     }
 
@@ -255,11 +259,11 @@ struct WebView: UIViewRepresentable {
 final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private static let webSchemes: Set<String> = ["http", "https"]
     private static let safeInlineSchemes: Set<String> = ["about", "data"]
-    private static let cancelledAppBounceSchemes: Set<String> = ["x-safari-http", "x-safari-https"]
 
     private var parent: WebView
     private let profile: SiteProfile
     private var didInstallContentRules: Bool = false
+    private var lastProgrammaticRequestURL: URL?
 
     init(parent: WebView, profile: SiteProfile) {
         self.parent = parent
@@ -301,12 +305,19 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        if Self.cancelledAppBounceSchemes.contains(scheme) {
+        if let mapped = Self.mapSafariBounceURL(url) {
+            webView.load(URLRequest(url: mapped))
             decisionHandler(.cancel)
             return
         }
 
         if Self.webSchemes.contains(scheme) {
+            if shouldRedirectHomeTimelineToNotifications(url) {
+                recordProgrammaticRequest(profile.startURL)
+                webView.load(URLRequest(url: profile.startURL))
+                decisionHandler(.cancel)
+                return
+            }
             handleHTTPNavigation(url, action: navigationAction, decisionHandler: decisionHandler)
             return
         }
@@ -359,7 +370,25 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 }
 
 private extension Coordinator {
+    func updateParent(_ parent: WebView) {
+        self.parent = parent
+    }
+
+    func shouldApplyProgrammaticRequest(_ url: URL) -> Bool {
+        lastProgrammaticRequestURL?.absoluteString != url.absoluteString
+    }
+
+    func recordProgrammaticRequest(_ url: URL) {
+        lastProgrammaticRequestURL = url
+    }
+
     func handleNavigationFailure(_ error: Error, prefix: String) {
+        if Self.shouldIgnoreNavigationError(error) {
+            #if DEBUG
+            print("Ignoring expected navigation cancellation: \(error.localizedDescription)")
+            #endif
+            return
+        }
         #if DEBUG
         print("\(prefix): \(error.localizedDescription)")
         #endif
@@ -390,6 +419,33 @@ private extension Coordinator {
         guard let host = url.host?.lowercased() else { return false }
         return profile.canonicalHosts.contains(host)
     }
+
+    func shouldRedirectHomeTimelineToNotifications(_ url: URL) -> Bool {
+        guard isInternalHost(url) else { return false }
+        let normalizedPath = Self.normalizePath(url.path)
+        return normalizedPath == "/home" || normalizedPath == "/i/timeline"
+    }
+
+    static func normalizePath(_ path: String) -> String {
+        let lowercased = path.lowercased()
+        guard lowercased.count > 1, lowercased.hasSuffix("/") else {
+            return lowercased
+        }
+        return String(lowercased.dropLast())
+    }
+
+    static func shouldIgnoreNavigationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        // WebKitErrorDomain code 102 is frame-load interrupted by a policy change.
+        if nsError.domain == WKError.errorDomain,
+           nsError.code == 102 {
+            return true
+        }
+        return false
+    }
 }
 
 extension Coordinator {
@@ -397,6 +453,46 @@ extension Coordinator {
         DispatchQueue.main.async {
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
+    }
+
+    static func mapSafariBounceURL(_ url: URL) -> URL? {
+        guard let incomingScheme = url.scheme?.lowercased() else { return nil }
+        let mappedScheme: String
+        switch incomingScheme {
+        case "x-safari-http":
+            mappedScheme = "http"
+        case "x-safari-https":
+            mappedScheme = "https"
+        default:
+            return nil
+        }
+
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let host = components.host {
+            var mapped = URLComponents()
+            mapped.scheme = mappedScheme
+            mapped.host = host
+            mapped.path = components.path
+            mapped.queryItems = components.queryItems
+            mapped.fragment = components.fragment
+            return mapped.url
+        }
+
+        let prefix = "\(incomingScheme):"
+        guard url.absoluteString.lowercased().hasPrefix(prefix) else { return nil }
+        let remainder = String(url.absoluteString.dropFirst(prefix.count))
+        if let nestedURL = URL(string: remainder),
+           let nestedScheme = nestedURL.scheme?.lowercased(),
+           nestedScheme == "http" || nestedScheme == "https" {
+            if nestedScheme == mappedScheme {
+                return nestedURL
+            }
+            var nestedComponents = URLComponents(url: nestedURL, resolvingAgainstBaseURL: false)
+            nestedComponents?.scheme = mappedScheme
+            return nestedComponents?.url
+        }
+        let normalized = remainder.hasPrefix("//") ? "\(mappedScheme):\(remainder)" : "\(mappedScheme)://\(remainder)"
+        return URL(string: normalized)
     }
 
     // Existing helpers kept for X profile
