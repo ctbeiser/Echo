@@ -232,10 +232,10 @@ struct WebView: UIViewRepresentable {
         webView.isInspectable = true
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
-        webView.customUserAgent = profile.userAgent
 
         context.coordinator.updateParent(self)
         context.coordinator.recordProgrammaticRequest(url)
+        webView.customUserAgent = profile.userAgent
         load(url, in: webView)
         return webView
     }
