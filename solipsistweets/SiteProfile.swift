@@ -65,7 +65,35 @@ struct RedditSiteProfile: SiteProfile {
         // No known reddit:// scheme mapping needed; return nil to cancel deep links
         return nil
     }
-    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { Coordinator.mapEchoDotAppToHTTPS(url: url) }
+    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? {
+        guard let incoming = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return URL(string: "https://www.reddit.com")
+        }
+        let lowerHost = incoming.host?.lowercased()
+        let isRedditHost = canonicalHosts.contains(lowerHost ?? "")
+
+        let path: String
+        if isRedditHost || lowerHost == nil {
+            path = incoming.path
+        } else {
+            let hostSegment = incoming.host ?? ""
+            if incoming.path.hasPrefix("/") {
+                path = "/" + hostSegment + incoming.path
+            } else if incoming.path.isEmpty {
+                path = "/" + hostSegment
+            } else {
+                path = "/" + hostSegment + "/" + incoming.path
+            }
+        }
+
+        var comps = URLComponents()
+        comps.scheme = "https"
+        comps.host = "www.reddit.com"
+        comps.path = path
+        comps.queryItems = incoming.queryItems
+        comps.fragment = incoming.fragment
+        return comps.url ?? URL(string: "https://www.reddit.com")
+    }
     var contentBlockerIdentifier: String { "com.orion.ContentBlocker.rules.v17" }
     var contentBlockerRulesJSON: String { Self.redditRulesJSON }
 

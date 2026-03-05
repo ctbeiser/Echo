@@ -11,6 +11,12 @@ struct OrionApp: App {
         WindowGroup {
             ContentView(requestedURL: $requestedURL, profile: profile)
                 .environmentObject(screenTimeTracker)
+                .onOpenURL { url in
+                    guard url.scheme?.lowercased() == "echodotapp" else { return }
+                    if let mapped = profile.mapEchoDotAppToHTTPS(url) {
+                        requestedURL = mapped
+                    }
+                }
                 .onAppear {
                     updateTracking(for: scenePhase)
                 }
