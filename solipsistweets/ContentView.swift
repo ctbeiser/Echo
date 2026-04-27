@@ -19,9 +19,15 @@ struct ContentView: View {
     @State private var showShareBanner = false
     @State private var isShareSheetPresented = false
     @State private var hideShareBannerTask: Task<Void, Never>?
+    @State private var showRemoveCurrentTabConfirmation = false
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
     let profile: any SiteProfile
+    var switcherIcon: String? = nil
+    var setupTabs: [SocialTab] = []
+    var onSwitchTab: (() -> Void)? = nil
+    var onRemoveActiveTab: (() -> Void)? = nil
+    var onSetupTab: ((SocialTab) -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -67,25 +73,63 @@ struct ContentView: View {
         }
         .overlay(alignment: .top) {
             if showShareBanner {
-                Button {
-                    isShareSheetPresented = true
-                    dismissShareBanner()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Share TestFlight")
-                            .font(.subheadline.weight(.semibold))
+                VStack(spacing: 8) {
+                    Button {
+                        isShareSheetPresented = true
+                        dismissShareBanner()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Share TestFlight")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .foregroundStyle(.primary)
+                        .background(.regularMaterial, in: Capsule())
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.primary)
-                    .background(.regularMaterial, in: Capsule())
+                    .buttonStyle(.plain)
+
+                    ForEach(setupTabs) { tab in
+                        Button {
+                            onSetupTab?(tab)
+                            dismissShareBanner()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text(tab.emoji)
+                                Text(tab.setupTitle)
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(.primary)
+                            .background(.regularMaterial, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
                 .padding(.top, 8)
                 .padding(.horizontal, 12)
                 .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let switcherIcon {
+                Text(switcherIcon)
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .liquidGlass(in: Circle())
+                    .padding(.top, 4)
+                    .padding(.trailing, 50)
+                    .onTapGesture {
+                        onSwitchTab?()
+                    }
+                    .onLongPressGesture(minimumDuration: 0.7) {
+                        showRemoveCurrentTabConfirmation = true
+                    }
+                    .accessibilityLabel("Switch account")
+                    .accessibilityAddTraits(.isButton)
             }
         }
         .onAppear {
@@ -100,6 +144,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isShareSheetPresented) {
             ShareSheet(activityItems: [Self.testFlightURL])
+        }
+        .confirmationDialog("Remove this tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
+            Button("Remove Tab", role: .destructive) {
+                onRemoveActiveTab?()
+            }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -141,6 +191,18 @@ struct ContentView: View {
                 }
                 hideShareBannerTask = nil
             }
+        }
+    }
+}
+
+
+private extension View {
+    @ViewBuilder
+    func liquidGlass<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.regularMaterial, in: shape)
         }
     }
 }
@@ -607,6 +669,28 @@ enum ContentBlocker {
             }
         }
     }
+
+    // Keep Bluesky rules separate from the original X/Twitter rules.
+    static let blueskyRulesJSON = """
+    [
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[data-testid='followingFeedPage']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Home']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Lists']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Feeds']" }
+      }
+    ]
+    """
 
     // Keep the original X/Twitter rules available for XSiteProfile
     static let defaultRulesJSON = """
