@@ -90,6 +90,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 160494112E6507440073407B /* Build configuration list for PBXNativeTarget "solipsistweets" */;
 			buildPhases = (
+				160494142E6507440073407B /* SwiftLint */,
 				160494022E6507430073407B /* Sources */,
 				160494032E6507430073407B /* Frameworks */,
 				160494042E6507430073407B /* Resources */,
@@ -112,6 +113,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 16EE1E3F2E7E546800B03BC8 /* Build configuration list for PBXNativeTarget "orion" */;
 			buildPhases = (
+				16EE1E422E7E546800B03BC8 /* SwiftLint */,
 				16EE1E332E7E546700B03BC8 /* Sources */,
 				16EE1E342E7E546700B03BC8 /* Frameworks */,
 				16EE1E352E7E546700B03BC8 /* Resources */,
@@ -185,6 +187,56 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		160494142E6507440073407B /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.swiftlint.yml",
+				"$(SRCROOT)/.swiftlint-build.yml",
+				"$(SRCROOT)/scripts/swiftlint.sh",
+				"$(SRCROOT)/solipsistweets",
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/SwiftLint-solipsistweets.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+		};
+		16EE1E422E7E546800B03BC8 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.swiftlint.yml",
+				"$(SRCROOT)/.swiftlint-build.yml",
+				"$(SRCROOT)/scripts/swiftlint.sh",
+				"$(SRCROOT)/solipsistweets",
+				"$(SRCROOT)/orion",
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/SwiftLint-orion.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/orion\" \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		160494022E6507430073407B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -207,7 +259,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -236,13 +288,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -271,7 +324,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -300,13 +353,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -330,6 +384,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_APP_SANDBOX = YES;
@@ -342,8 +399,6 @@
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=macosx*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=xros*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access for web pages when you choose to capture photos or video.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access for web pages when you choose to share your location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access for web pages when you choose to record audio or video.";
@@ -360,22 +415,23 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.04;
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.0;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -386,6 +442,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_APP_SANDBOX = YES;
@@ -398,8 +457,6 @@
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=macosx*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=xros*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access for web pages when you choose to capture photos or video.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access for web pages when you choose to share your location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access for web pages when you choose to record audio or video.";
@@ -416,22 +473,23 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.04;
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.0;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -442,6 +500,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -464,12 +525,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.orion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -481,6 +546,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -503,12 +571,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.orion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};

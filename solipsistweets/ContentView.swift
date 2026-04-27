@@ -11,17 +11,45 @@ import Combine
 
 struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
-    private static let testFlightURL = URL(string: "https://testflight.apple.com/join/N3DtJcgD")!
+    private static let testFlightURL = URL.required(string: "https://testflight.apple.com/join/N3DtJcgD")
     @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
-    @State private var lastErrorDescription: String? = nil
+    @State private var lastErrorDescription: String?
     @StateObject private var shakeDetector = ShakeDetector()
     @State private var showShareBanner = false
     @State private var isShareSheetPresented = false
     @State private var hideShareBannerTask: Task<Void, Never>?
+    @State private var showRemoveCurrentTabConfirmation = false
+    @State private var isSwitcherPressed = false
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
-    let profile: SiteProfile
+    let profile: any SiteProfile
+    var switcherIcon: String?
+    var removableTabs: [SocialTab] = []
+    var setupTabs: [SocialTab] = []
+    var onSwitchTab: (() -> Void)?
+    var onRemoveTab: ((SocialTab) -> Void)?
+    var onSetupTab: ((SocialTab) -> Void)?
+
+    init(
+        requestedURL: Binding<URL>,
+        profile: any SiteProfile,
+        switcherIcon: String? = nil,
+        removableTabs: [SocialTab] = [],
+        setupTabs: [SocialTab] = [],
+        onSwitchTab: (() -> Void)? = nil,
+        onRemoveTab: ((SocialTab) -> Void)? = nil,
+        onSetupTab: ((SocialTab) -> Void)? = nil
+    ) {
+        _requestedURL = requestedURL
+        self.profile = profile
+        self.switcherIcon = switcherIcon
+        self.removableTabs = removableTabs
+        self.setupTabs = setupTabs
+        self.onSwitchTab = onSwitchTab
+        self.onRemoveTab = onRemoveTab
+        self.onSetupTab = onSetupTab
+    }
 
     var body: some View {
         ZStack {
@@ -67,25 +95,67 @@ struct ContentView: View {
         }
         .overlay(alignment: .top) {
             if showShareBanner {
-                Button {
-                    isShareSheetPresented = true
-                    dismissShareBanner()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Share TestFlight")
-                            .font(.subheadline.weight(.semibold))
+                VStack(spacing: 8) {
+                    Button {
+                        isShareSheetPresented = true
+                        dismissShareBanner()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Share TestFlight")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .foregroundStyle(.primary)
+                        .background(.regularMaterial, in: Capsule())
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.primary)
-                    .background(.regularMaterial, in: Capsule())
+                    .buttonStyle(.plain)
+
+                    ForEach(setupTabs) { tab in
+                        Button {
+                            onSetupTab?(tab)
+                            dismissShareBanner()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text(tab.emoji)
+                                Text(tab.setupTitle)
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(.primary)
+                            .background(.regularMaterial, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
                 .padding(.top, 8)
                 .padding(.horizontal, 12)
                 .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let switcherIcon {
+                Text(switcherIcon)
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .liquidGlass(in: Circle())
+                    .scaleEffect(isSwitcherPressed ? 0.9 : 1)
+                    .padding(.top, 4)
+                    .padding(.trailing, 50)
+                    .onTapGesture {
+                        onSwitchTab?()
+                    }
+                    .onLongPressGesture(
+                        minimumDuration: 0.7,
+                        maximumDistance: 44,
+                        pressing: updateSwitcherPressState,
+                        perform: presentRemoveTabChoices
+                    )
+                    .accessibilityLabel("Switch account")
+                    .accessibilityAddTraits(.isButton)
             }
         }
         .onAppear {
@@ -101,6 +171,20 @@ struct ContentView: View {
         .sheet(isPresented: $isShareSheetPresented) {
             ShareSheet(activityItems: [Self.testFlightURL])
         }
+        .confirmationDialog("Remove a tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
+            ForEach(removeTabChoices) { tab in
+                Button(tab.removeActionTitle, role: .destructive) {
+                    onRemoveTab?(tab)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                showRemoveCurrentTabConfirmation = false
+            }
+        }
+    }
+
+    private var removeTabChoices: [SocialTab] {
+        [.bluesky, .x].filter { removableTabs.contains($0) }
     }
 
     private var shouldShowScreenTimeBadge: Bool {
@@ -143,6 +227,41 @@ struct ContentView: View {
             }
         }
     }
+
+    private func updateSwitcherPressState(_ isPressing: Bool) {
+        withAnimation(.spring(response: 0.18, dampingFraction: 0.72)) {
+            isSwitcherPressed = isPressing
+        }
+    }
+
+    private func presentRemoveTabChoices() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.bouncy(duration: 0.42, extraBounce: 0.22)) {
+            isSwitcherPressed = false
+        }
+        showRemoveCurrentTabConfirmation = true
+    }
+}
+
+
+private extension View {
+    @ViewBuilder
+    func liquidGlass<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.regularMaterial, in: shape)
+        }
+    }
+}
+
+private extension SocialTab {
+    var removeActionTitle: String {
+        switch self {
+        case .x: return "Remove X / Twitter Tab"
+        case .bluesky: return "Remove Bluesky Tab"
+        }
+    }
 }
 
 // MARK: - Duration formatting
@@ -152,15 +271,21 @@ private func formatDuration(_ seconds: TimeInterval) -> String {
     let hours = totalSeconds / 3600
     let minutes = (totalSeconds % 3600) / 60
     let secs = totalSeconds % 60
+    let paddedMinutes = twoDigitString(minutes)
+    let paddedSeconds = twoDigitString(secs)
     if hours > 0 {
-        return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        return "\(hours):\(paddedMinutes):\(paddedSeconds)"
     } else {
-        return String(format: "%d:%02d", minutes, secs)
+        return "\(minutes):\(paddedSeconds)"
     }
 }
 
+private func twoDigitString(_ value: Int) -> String {
+    value < 10 ? "0\(value)" : "\(value)"
+}
+
 #Preview {
-    ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!), profile: XSiteProfile())
+    ContentView(requestedURL: .constant(URL.required(string: "https://x.com/notifications")), profile: XSiteProfile())
         .environmentObject(OnScreenTimeTracker())
 }
 
@@ -171,7 +296,10 @@ private struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        _ = uiViewController
+        _ = context
+    }
 }
 
 final class ShakeDetector: ObservableObject {
@@ -205,7 +333,9 @@ final class ShakeDetector: ObservableObject {
     }
 
     deinit {
-        motionManager.stopDeviceMotionUpdates()
+        MainActor.assumeIsolated {
+            motionManager.stopDeviceMotionUpdates()
+        }
     }
 }
 
@@ -216,7 +346,7 @@ struct WebView: UIViewRepresentable {
     let url: URL
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
-    let profile: SiteProfile
+    let profile: any SiteProfile
 
     typealias UIViewType = WKWebView
 
@@ -261,29 +391,33 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private static let safeInlineSchemes: Set<String> = ["about", "data"]
 
     private var parent: WebView
-    private let profile: SiteProfile
+    private let profile: any SiteProfile
     private var didInstallContentRules: Bool = false
     private var lastProgrammaticRequestURL: URL?
 
-    init(parent: WebView, profile: SiteProfile) {
+    init(parent: WebView, profile: any SiteProfile) {
         self.parent = parent
         self.profile = profile
     }
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         DispatchQueue.main.async { [weak self] in
             self?.parent.isLoading = true
         }
     }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
         handleNavigationFailure(error, prefix: "Navigation failed")
     }
 
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
         handleNavigationFailure(error, prefix: "Provisional navigation failed")
     }
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         #if DEBUG
         print("Navigation finished: \(webView.url?.absoluteString ?? "<nil>")")
@@ -299,7 +433,7 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         }
     }
 
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         guard let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() else {
             decisionHandler(.allow)
             return
@@ -382,7 +516,7 @@ private extension Coordinator {
         lastProgrammaticRequestURL = url
     }
 
-    func handleNavigationFailure(_ error: Error, prefix: String) {
+    func handleNavigationFailure(_ error: any Error, prefix: String) {
         if Self.shouldIgnoreNavigationError(error) {
             #if DEBUG
             print("Ignoring expected navigation cancellation: \(error.localizedDescription)")
@@ -398,7 +532,7 @@ private extension Coordinator {
         }
     }
 
-    func handleHTTPNavigation(_ url: URL, action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    func handleHTTPNavigation(_ url: URL, action: WKNavigationAction, decisionHandler: @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         let isUserTap = action.navigationType == .linkActivated
         let isMainFrame = action.targetFrame?.isMainFrame ?? true
 
@@ -434,7 +568,7 @@ private extension Coordinator {
         return String(lowercased.dropLast())
     }
 
-    static func shouldIgnoreNavigationError(_ error: Error) -> Bool {
+    static func shouldIgnoreNavigationError(_ error: any Error) -> Bool {
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
             return true
@@ -507,7 +641,7 @@ extension Coordinator {
         if host == "user", let screenName = valueFor("screen_name"), !screenName.isEmpty {
             return URL(string: "https://x.com/\(screenName)")
         }
-        if (host == "status" || host == "tweet"), let id = valueFor("id"), !id.isEmpty {
+        if host == "status" || host == "tweet", let id = valueFor("id"), !id.isEmpty {
             return URL(string: "https://x.com/i/web/status/\(id)")
         }
         if host == "messages" || path == "/messages" {
@@ -592,6 +726,28 @@ enum ContentBlocker {
             }
         }
     }
+
+    // Keep Bluesky rules separate from the original X/Twitter rules.
+    static let blueskyRulesJSON = """
+    [
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[data-testid='followingFeedPage']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Home']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Lists']" }
+      },
+      {
+        "trigger": { "url-filter": ".*", "if-domain": ["cope.works", "www.cope.works"] },
+        "action": { "type": "css-display-none", "selector": "[aria-label='Feeds']" }
+      }
+    ]
+    """
 
     // Keep the original X/Twitter rules available for XSiteProfile
     static let defaultRulesJSON = """

@@ -1,4 +1,5 @@
 .context/
+DerivedData/
 
 # Xcode user-specific files
 *.xcuserstate

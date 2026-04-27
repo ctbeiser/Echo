@@ -2,6 +2,15 @@ import Foundation
 import WebKit
 import UIKit
 
+extension URL {
+    static func required(string: String) -> URL {
+        guard let url = URL(string: string) else {
+            fatalError("Invalid required URL: \(string)")
+        }
+        return url
+    }
+}
+
 private enum SharedUserAgent {
     static var mobileSafariCurrentDevice: String {
         let osVersion = UIDevice.current.systemVersion
@@ -29,6 +38,42 @@ private enum SharedUserAgent {
     }
 }
 
+
+enum SocialTab: String, CaseIterable, Identifiable {
+    case x
+    case bluesky
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .x: return "Twitter / X"
+        case .bluesky: return "Bluesky"
+        }
+    }
+
+    var setupTitle: String {
+        switch self {
+        case .x: return "Set Up X"
+        case .bluesky: return "Set Up Bluesky"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .x: return "🐦"
+        case .bluesky: return "🦋"
+        }
+    }
+
+    var profile: any SiteProfile {
+        switch self {
+        case .x: return XSiteProfile()
+        case .bluesky: return BlueskySiteProfile()
+        }
+    }
+}
+
 protocol SiteProfile {
     // Hosts that are considered “internal” and should open in-app
     var canonicalHosts: Set<String> { get }
@@ -47,7 +92,7 @@ protocol SiteProfile {
 
 struct XSiteProfile: SiteProfile {
     let canonicalHosts: Set<String> = ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com"]
-    var startURL: URL { URL(string: "https://x.com/notifications")! }
+    var startURL: URL { URL.required(string: "https://x.com/notifications") }
     var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
     func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
         Coordinator.mapTwitterDeepLinkToHTTPS(url: url)
@@ -57,9 +102,19 @@ struct XSiteProfile: SiteProfile {
     var contentBlockerRulesJSON: String { ContentBlocker.defaultRulesJSON }
 }
 
+struct BlueskySiteProfile: SiteProfile {
+    let canonicalHosts: Set<String> = ["cope.works", "www.cope.works"]
+    var startURL: URL { URL.required(string: "https://cope.works/notifications") }
+    var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
+    func mapDeepLinkToHTTPS(_ url: URL) -> URL? { nil }
+    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { nil }
+    var contentBlockerIdentifier: String { "com.solipsistweets.ContentBlocker.bluesky.rules.v4" }
+    var contentBlockerRulesJSON: String { ContentBlocker.blueskyRulesJSON }
+}
+
 struct RedditSiteProfile: SiteProfile {
     let canonicalHosts: Set<String> = ["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com"]
-    var startURL: URL { URL(string: "https://www.reddit.com/")! }
+    var startURL: URL { URL.required(string: "https://www.reddit.com/") }
     var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
     func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
         // No known reddit:// scheme mapping needed; return nil to cancel deep links

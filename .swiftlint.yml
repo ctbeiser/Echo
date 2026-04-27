@@ -1,0 +1,61 @@
+reporter: xcode
+strict: true
+
+included:
+  - solipsistweets
+  - orion
+
+excluded:
+  - DerivedData
+  - .context
+
+disabled_rules:
+  # Broad shape limits are intentionally disabled so safety checks stay useful.
+  - cyclomatic_complexity
+  - file_length
+  - function_body_length
+  - function_parameter_count
+  - identifier_name
+  - large_tuple
+  - line_length
+  - nesting
+  - type_body_length
+
+  # Keep style-only noise out of strict build gates unless existing code is
+  # baselined or fixed separately.
+  - colon
+  - comma
+  - function_name_whitespace
+  - no_space_in_method_call
+  - opening_brace
+  - statement_position
+  - switch_case_alignment
+  - trailing_comma
+  - trailing_newline
+  - trailing_whitespace
+  - vertical_whitespace
+
+opt_in_rules:
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - discarded_notification_center_observer
+  - empty_count
+  - empty_string
+  - fallthrough
+  - fatal_error_message
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - identical_operands
+  - no_empty_block
+  - private_action
+  - private_outlet
+  - private_subject
+  - private_swiftui_state
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unhandled_throwing_task
+  - unneeded_escaping
+  - unneeded_throws_rethrows
+  - unowned_variable_capture
+  - weak_delegate
+  - yoda_condition
