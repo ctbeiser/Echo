@@ -2,6 +2,15 @@ import Foundation
 import WebKit
 import UIKit
 
+extension URL {
+    static func required(string: String) -> URL {
+        guard let url = URL(string: string) else {
+            fatalError("Invalid required URL: \(string)")
+        }
+        return url
+    }
+}
+
 private enum SharedUserAgent {
     static var mobileSafariCurrentDevice: String {
         let osVersion = UIDevice.current.systemVersion
@@ -47,7 +56,7 @@ protocol SiteProfile {
 
 struct XSiteProfile: SiteProfile {
     let canonicalHosts: Set<String> = ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com"]
-    var startURL: URL { URL(string: "https://x.com/notifications")! }
+    var startURL: URL { URL.required(string: "https://x.com/notifications") }
     var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
     func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
         Coordinator.mapTwitterDeepLinkToHTTPS(url: url)
@@ -59,7 +68,7 @@ struct XSiteProfile: SiteProfile {
 
 struct RedditSiteProfile: SiteProfile {
     let canonicalHosts: Set<String> = ["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com"]
-    var startURL: URL { URL(string: "https://www.reddit.com/")! }
+    var startURL: URL { URL.required(string: "https://www.reddit.com/") }
     var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
     func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
         // No known reddit:// scheme mapping needed; return nil to cancel deep links

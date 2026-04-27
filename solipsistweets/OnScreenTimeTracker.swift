@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class OnScreenTimeTracker: ObservableObject {
     private static let keyPrefix = "onScreenSeconds_"
 
@@ -17,7 +18,9 @@ final class OnScreenTimeTracker: ObservableObject {
     }
 
     deinit {
-        timer?.invalidate()
+        MainActor.assumeIsolated {
+            timer?.invalidate()
+        }
     }
 
     func start() {
@@ -26,7 +29,9 @@ final class OnScreenTimeTracker: ObservableObject {
         secondsToday = userDefaults.double(forKey: Self.key(for: Date()))
         lastTickDate = Date()
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.tick()
+            Task { @MainActor [weak self] in
+                self?.tick()
+            }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer

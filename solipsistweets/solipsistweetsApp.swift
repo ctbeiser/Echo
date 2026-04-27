@@ -6,11 +6,11 @@
 import SwiftUI
 
 @main
-struct solipsistweetsApp: App {
+struct SolipsistweetsApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var requestedURL: URL = XSiteProfile().startURL
     @StateObject private var screenTimeTracker = OnScreenTimeTracker()
-    private let profile: SiteProfile = XSiteProfile()
+    private let profile: any SiteProfile = XSiteProfile()
 
     var body: some Scene {
         WindowGroup {

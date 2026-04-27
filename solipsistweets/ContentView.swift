@@ -11,17 +11,17 @@ import Combine
 
 struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
-    private static let testFlightURL = URL(string: "https://testflight.apple.com/join/N3DtJcgD")!
+    private static let testFlightURL = URL.required(string: "https://testflight.apple.com/join/N3DtJcgD")
     @Binding var requestedURL: URL
     @State private var isLoading: Bool = true
-    @State private var lastErrorDescription: String? = nil
+    @State private var lastErrorDescription: String?
     @StateObject private var shakeDetector = ShakeDetector()
     @State private var showShareBanner = false
     @State private var isShareSheetPresented = false
     @State private var hideShareBannerTask: Task<Void, Never>?
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
-    let profile: SiteProfile
+    let profile: any SiteProfile
 
     var body: some View {
         ZStack {
@@ -152,15 +152,21 @@ private func formatDuration(_ seconds: TimeInterval) -> String {
     let hours = totalSeconds / 3600
     let minutes = (totalSeconds % 3600) / 60
     let secs = totalSeconds % 60
+    let paddedMinutes = twoDigitString(minutes)
+    let paddedSeconds = twoDigitString(secs)
     if hours > 0 {
-        return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        return "\(hours):\(paddedMinutes):\(paddedSeconds)"
     } else {
-        return String(format: "%d:%02d", minutes, secs)
+        return "\(minutes):\(paddedSeconds)"
     }
 }
 
+private func twoDigitString(_ value: Int) -> String {
+    value < 10 ? "0\(value)" : "\(value)"
+}
+
 #Preview {
-    ContentView(requestedURL: .constant(URL(string: "https://x.com/notifications")!), profile: XSiteProfile())
+    ContentView(requestedURL: .constant(URL.required(string: "https://x.com/notifications")), profile: XSiteProfile())
         .environmentObject(OnScreenTimeTracker())
 }
 
@@ -171,7 +177,10 @@ private struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        _ = uiViewController
+        _ = context
+    }
 }
 
 final class ShakeDetector: ObservableObject {
@@ -205,7 +214,9 @@ final class ShakeDetector: ObservableObject {
     }
 
     deinit {
-        motionManager.stopDeviceMotionUpdates()
+        MainActor.assumeIsolated {
+            motionManager.stopDeviceMotionUpdates()
+        }
     }
 }
 
@@ -216,7 +227,7 @@ struct WebView: UIViewRepresentable {
     let url: URL
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
-    let profile: SiteProfile
+    let profile: any SiteProfile
 
     typealias UIViewType = WKWebView
 
@@ -261,29 +272,33 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private static let safeInlineSchemes: Set<String> = ["about", "data"]
 
     private var parent: WebView
-    private let profile: SiteProfile
+    private let profile: any SiteProfile
     private var didInstallContentRules: Bool = false
     private var lastProgrammaticRequestURL: URL?
 
-    init(parent: WebView, profile: SiteProfile) {
+    init(parent: WebView, profile: any SiteProfile) {
         self.parent = parent
         self.profile = profile
     }
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         DispatchQueue.main.async { [weak self] in
             self?.parent.isLoading = true
         }
     }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
         handleNavigationFailure(error, prefix: "Navigation failed")
     }
 
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
         handleNavigationFailure(error, prefix: "Provisional navigation failed")
     }
 
+    // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         #if DEBUG
         print("Navigation finished: \(webView.url?.absoluteString ?? "<nil>")")
@@ -299,7 +314,7 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         }
     }
 
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         guard let url = navigationAction.request.url, let scheme = url.scheme?.lowercased() else {
             decisionHandler(.allow)
             return
@@ -382,7 +397,7 @@ private extension Coordinator {
         lastProgrammaticRequestURL = url
     }
 
-    func handleNavigationFailure(_ error: Error, prefix: String) {
+    func handleNavigationFailure(_ error: any Error, prefix: String) {
         if Self.shouldIgnoreNavigationError(error) {
             #if DEBUG
             print("Ignoring expected navigation cancellation: \(error.localizedDescription)")
@@ -398,7 +413,7 @@ private extension Coordinator {
         }
     }
 
-    func handleHTTPNavigation(_ url: URL, action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    func handleHTTPNavigation(_ url: URL, action: WKNavigationAction, decisionHandler: @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         let isUserTap = action.navigationType == .linkActivated
         let isMainFrame = action.targetFrame?.isMainFrame ?? true
 
@@ -434,7 +449,7 @@ private extension Coordinator {
         return String(lowercased.dropLast())
     }
 
-    static func shouldIgnoreNavigationError(_ error: Error) -> Bool {
+    static func shouldIgnoreNavigationError(_ error: any Error) -> Bool {
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
             return true
@@ -507,7 +522,7 @@ extension Coordinator {
         if host == "user", let screenName = valueFor("screen_name"), !screenName.isEmpty {
             return URL(string: "https://x.com/\(screenName)")
         }
-        if (host == "status" || host == "tweet"), let id = valueFor("id"), !id.isEmpty {
+        if host == "status" || host == "tweet", let id = valueFor("id"), !id.isEmpty {
             return URL(string: "https://x.com/i/web/status/\(id)")
         }
         if host == "messages" || path == "/messages" {
