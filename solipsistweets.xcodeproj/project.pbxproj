@@ -209,7 +209,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 		16EE1E422E7E546800B03BC8 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -233,7 +233,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/orion\" \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/orion\" \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

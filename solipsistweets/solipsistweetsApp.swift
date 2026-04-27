@@ -188,14 +188,18 @@ private struct SocialWebContainer: View {
                     requestedURL: $requestedURL,
                     profile: accountStore.activeProfile,
                     switcherIcon: accountStore.nextTab?.emoji,
+                    removableTabs: accountStore.configuredTabs,
                     setupTabs: accountStore.missingTabs,
                     onSwitchTab: {
                         accountStore.switchToNextTab()
                         requestedURL = accountStore.activeProfile.startURL
                     },
-                    onRemoveActiveTab: {
-                        accountStore.remove(accountStore.activeTab)
-                        requestedURL = accountStore.activeProfile.startURL
+                    onRemoveTab: { tab in
+                        let removedActiveTab = tab == accountStore.activeTab
+                        accountStore.remove(tab)
+                        if removedActiveTab {
+                            requestedURL = accountStore.activeProfile.startURL
+                        }
                     },
                     onSetupTab: { tab in
                         accountStore.add(tab)

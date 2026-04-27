@@ -20,14 +20,36 @@ struct ContentView: View {
     @State private var isShareSheetPresented = false
     @State private var hideShareBannerTask: Task<Void, Never>?
     @State private var showRemoveCurrentTabConfirmation = false
+    @State private var isSwitcherPressed = false
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
     let profile: any SiteProfile
-    var switcherIcon: String? = nil
+    var switcherIcon: String?
+    var removableTabs: [SocialTab] = []
     var setupTabs: [SocialTab] = []
-    var onSwitchTab: (() -> Void)? = nil
-    var onRemoveActiveTab: (() -> Void)? = nil
-    var onSetupTab: ((SocialTab) -> Void)? = nil
+    var onSwitchTab: (() -> Void)?
+    var onRemoveTab: ((SocialTab) -> Void)?
+    var onSetupTab: ((SocialTab) -> Void)?
+
+    init(
+        requestedURL: Binding<URL>,
+        profile: any SiteProfile,
+        switcherIcon: String? = nil,
+        removableTabs: [SocialTab] = [],
+        setupTabs: [SocialTab] = [],
+        onSwitchTab: (() -> Void)? = nil,
+        onRemoveTab: ((SocialTab) -> Void)? = nil,
+        onSetupTab: ((SocialTab) -> Void)? = nil
+    ) {
+        _requestedURL = requestedURL
+        self.profile = profile
+        self.switcherIcon = switcherIcon
+        self.removableTabs = removableTabs
+        self.setupTabs = setupTabs
+        self.onSwitchTab = onSwitchTab
+        self.onRemoveTab = onRemoveTab
+        self.onSetupTab = onSetupTab
+    }
 
     var body: some View {
         ZStack {
@@ -120,14 +142,18 @@ struct ContentView: View {
                     .font(.title3)
                     .frame(width: 44, height: 44)
                     .liquidGlass(in: Circle())
+                    .scaleEffect(isSwitcherPressed ? 0.9 : 1)
                     .padding(.top, 4)
                     .padding(.trailing, 50)
                     .onTapGesture {
                         onSwitchTab?()
                     }
-                    .onLongPressGesture(minimumDuration: 0.7) {
-                        showRemoveCurrentTabConfirmation = true
-                    }
+                    .onLongPressGesture(
+                        minimumDuration: 0.7,
+                        maximumDistance: 44,
+                        pressing: updateSwitcherPressState,
+                        perform: presentRemoveTabChoices
+                    )
                     .accessibilityLabel("Switch account")
                     .accessibilityAddTraits(.isButton)
             }
@@ -145,12 +171,20 @@ struct ContentView: View {
         .sheet(isPresented: $isShareSheetPresented) {
             ShareSheet(activityItems: [Self.testFlightURL])
         }
-        .confirmationDialog("Remove this tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
-            Button("Remove Tab", role: .destructive) {
-                onRemoveActiveTab?()
+        .confirmationDialog("Remove a tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
+            ForEach(removeTabChoices) { tab in
+                Button(tab.removeActionTitle, role: .destructive) {
+                    onRemoveTab?(tab)
+                }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                showRemoveCurrentTabConfirmation = false
+            }
         }
+    }
+
+    private var removeTabChoices: [SocialTab] {
+        [.bluesky, .x].filter { removableTabs.contains($0) }
     }
 
     private var shouldShowScreenTimeBadge: Bool {
@@ -193,6 +227,20 @@ struct ContentView: View {
             }
         }
     }
+
+    private func updateSwitcherPressState(_ isPressing: Bool) {
+        withAnimation(.spring(response: 0.18, dampingFraction: 0.72)) {
+            isSwitcherPressed = isPressing
+        }
+    }
+
+    private func presentRemoveTabChoices() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.bouncy(duration: 0.42, extraBounce: 0.22)) {
+            isSwitcherPressed = false
+        }
+        showRemoveCurrentTabConfirmation = true
+    }
 }
 
 
@@ -203,6 +251,15 @@ private extension View {
             self.glassEffect(.regular, in: shape)
         } else {
             self.background(.regularMaterial, in: shape)
+        }
+    }
+}
+
+private extension SocialTab {
+    var removeActionTitle: String {
+        switch self {
+        case .x: return "Remove X / Twitter Tab"
+        case .bluesky: return "Remove Bluesky Tab"
         }
     }
 }
