@@ -21,20 +21,6 @@
                ReferencedContainer = "container:solipsistweets.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "16EE1E362E7E546700B03BC8"
-               BuildableName = "orion.app"
-               BlueprintName = "orion"
-               ReferencedContainer = "container:solipsistweets.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

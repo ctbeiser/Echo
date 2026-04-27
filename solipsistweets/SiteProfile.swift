@@ -1,6 +1,6 @@
 import Foundation
-import WebKit
 import UIKit
+import WebKit
 
 extension URL {
     static func required(string: String) -> URL {
@@ -38,7 +38,6 @@ private enum SharedUserAgent {
     }
 }
 
-
 enum SocialTab: String, CaseIterable, Identifiable {
     case x
     case bluesky
@@ -66,75 +65,49 @@ enum SocialTab: String, CaseIterable, Identifiable {
         }
     }
 
-    var profile: any SiteProfile {
+    var canonicalHosts: Set<String> {
         switch self {
-        case .x: return XSiteProfile()
-        case .bluesky: return BlueskySiteProfile()
+        case .x: return ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com"]
+        case .bluesky: return ["cope.works", "www.cope.works"]
         }
     }
-}
 
-protocol SiteProfile {
-    // Hosts that are considered “internal” and should open in-app
-    var canonicalHosts: Set<String> { get }
-    // Initial URL to load
-    var startURL: URL { get }
-    // User agent string used for all requests.
-    var userAgent: String { get }
-    // Optional deep link mapping from custom schemes to https
-    func mapDeepLinkToHTTPS(_ url: URL) -> URL?
-    // Optional mapping for custom echodotapp://. Keep behavior same across profiles unless overridden.
-    func mapEchoDotAppToHTTPS(_ url: URL) -> URL?
-    // Content blocker identifier and JSON list
-    var contentBlockerIdentifier: String { get }
-    var contentBlockerRulesJSON: String { get }
-}
-
-struct XSiteProfile: SiteProfile {
-    let canonicalHosts: Set<String> = ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com"]
-    var startURL: URL { URL.required(string: "https://x.com/notifications") }
-    var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
-    func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
-        Coordinator.mapTwitterDeepLinkToHTTPS(url: url)
-    }
-    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { Coordinator.mapEchoDotAppToHTTPS(url: url) }
-    var contentBlockerIdentifier: String { "com.solipsistweets.ContentBlocker.rules.v11" }
-    var contentBlockerRulesJSON: String { ContentBlocker.defaultRulesJSON }
-}
-
-struct BlueskySiteProfile: SiteProfile {
-    let canonicalHosts: Set<String> = ["cope.works", "www.cope.works"]
-    var startURL: URL { URL.required(string: "https://cope.works/notifications") }
-    var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
-    func mapDeepLinkToHTTPS(_ url: URL) -> URL? { nil }
-    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { nil }
-    var contentBlockerIdentifier: String { "com.solipsistweets.ContentBlocker.bluesky.rules.v4" }
-    var contentBlockerRulesJSON: String { ContentBlocker.blueskyRulesJSON }
-}
-
-struct RedditSiteProfile: SiteProfile {
-    let canonicalHosts: Set<String> = ["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com"]
-    var startURL: URL { URL.required(string: "https://www.reddit.com/") }
-    var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
-    func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
-        // No known reddit:// scheme mapping needed; return nil to cancel deep links
-        return nil
-    }
-    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { Coordinator.mapEchoDotAppToHTTPS(url: url) }
-    var contentBlockerIdentifier: String { "com.orion.ContentBlocker.rules.v17" }
-    var contentBlockerRulesJSON: String { Self.redditRulesJSON }
-
-    private static let redditRulesJSON = """
-    [
-      {
-        "trigger": {
-          "url-filter": ".*"
-        },
-        "action": {
-          "type": "css-display-none",
-          "selector": "#main-content"
+    var startURL: URL {
+        switch self {
+        case .x: return URL.required(string: "https://x.com/notifications")
+        case .bluesky: return URL.required(string: "https://cope.works/notifications")
         }
-      }
-    ]
-    """
+    }
+
+    var userAgent: String {
+        SharedUserAgent.mobileSafariCurrentDevice
+    }
+
+    var contentBlockerIdentifier: String {
+        switch self {
+        case .x: return "com.solipsistweets.ContentBlocker.rules.v11"
+        case .bluesky: return "com.solipsistweets.ContentBlocker.bluesky.rules.v4"
+        }
+    }
+
+    var contentBlockerRulesJSON: String {
+        switch self {
+        case .x: return ContentBlocker.xRulesJSON
+        case .bluesky: return ContentBlocker.blueskyRulesJSON
+        }
+    }
+
+    func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
+        switch self {
+        case .x: return Coordinator.mapTwitterDeepLinkToHTTPS(url: url)
+        case .bluesky: return nil
+        }
+    }
+
+    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? {
+        switch self {
+        case .x: return Coordinator.mapEchoDotAppToHTTPS(url: url)
+        case .bluesky: return nil
+        }
+    }
 }

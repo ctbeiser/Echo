@@ -10,7 +10,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if [[ $# -eq 0 ]]; then
-  set -- solipsistweets orion
+  set -- solipsistweets
 fi
 
 if ! command -v swiftlint >/dev/null 2>&1; then

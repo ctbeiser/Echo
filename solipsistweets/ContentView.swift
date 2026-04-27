@@ -1,13 +1,13 @@
 //
 //  ContentView.swift
-//  solipsistweets / Orion (shared)
+//  solipsistweets
 //
 
+import Combine
+import CoreMotion
 import SwiftUI
 import UIKit
 import WebKit
-import CoreMotion
-import Combine
 
 struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
@@ -23,7 +23,7 @@ struct ContentView: View {
     @State private var isSwitcherPressed = false
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
-    let profile: any SiteProfile
+    let activeTab: SocialTab
     var switcherIcon: String?
     var removableTabs: [SocialTab] = []
     var setupTabs: [SocialTab] = []
@@ -33,7 +33,7 @@ struct ContentView: View {
 
     init(
         requestedURL: Binding<URL>,
-        profile: any SiteProfile,
+        activeTab: SocialTab,
         switcherIcon: String? = nil,
         removableTabs: [SocialTab] = [],
         setupTabs: [SocialTab] = [],
@@ -42,7 +42,7 @@ struct ContentView: View {
         onSetupTab: ((SocialTab) -> Void)? = nil
     ) {
         _requestedURL = requestedURL
-        self.profile = profile
+        self.activeTab = activeTab
         self.switcherIcon = switcherIcon
         self.removableTabs = removableTabs
         self.setupTabs = setupTabs
@@ -53,7 +53,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, profile: profile)
+            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, activeTab: activeTab)
                 .ignoresSafeArea(edges: [.bottom])
 
             if isLoading {
@@ -89,7 +89,6 @@ struct ContentView: View {
                         UIControl().sendAction(#selector(NSXPCConnection.suspend),
                                                to: UIApplication.shared,
                                                for: nil)
-
                     }
             }
         }
@@ -243,7 +242,6 @@ struct ContentView: View {
     }
 }
 
-
 private extension View {
     @ViewBuilder
     func liquidGlass<S: Shape>(in shape: S) -> some View {
@@ -285,7 +283,7 @@ private func twoDigitString(_ value: Int) -> String {
 }
 
 #Preview {
-    ContentView(requestedURL: .constant(URL.required(string: "https://x.com/notifications")), profile: XSiteProfile())
+    ContentView(requestedURL: .constant(URL.required(string: "https://x.com/notifications")), activeTab: .x)
         .environmentObject(OnScreenTimeTracker())
 }
 
@@ -346,7 +344,7 @@ struct WebView: UIViewRepresentable {
     let url: URL
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
-    let profile: any SiteProfile
+    let activeTab: SocialTab
 
     typealias UIViewType = WKWebView
 
@@ -365,7 +363,7 @@ struct WebView: UIViewRepresentable {
 
         context.coordinator.updateParent(self)
         context.coordinator.recordProgrammaticRequest(url)
-        webView.customUserAgent = profile.userAgent
+        webView.customUserAgent = activeTab.userAgent
         load(url, in: webView)
         return webView
     }
@@ -378,7 +376,7 @@ struct WebView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self, profile: profile)
+        Coordinator(parent: self, activeTab: activeTab)
     }
 
     private func load(_ url: URL, in webView: WKWebView) {
@@ -391,13 +389,13 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private static let safeInlineSchemes: Set<String> = ["about", "data"]
 
     private var parent: WebView
-    private let profile: any SiteProfile
+    private let activeTab: SocialTab
     private var didInstallContentRules: Bool = false
     private var lastProgrammaticRequestURL: URL?
 
-    init(parent: WebView, profile: any SiteProfile) {
+    init(parent: WebView, activeTab: SocialTab) {
         self.parent = parent
-        self.profile = profile
+        self.activeTab = activeTab
     }
 
     // swiftlint:disable:next implicitly_unwrapped_optional
@@ -425,7 +423,7 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
         if !didInstallContentRules {
             didInstallContentRules = true
-            ContentBlocker.installRuleList(into: webView, identifier: profile.contentBlockerIdentifier, rulesJSON: profile.contentBlockerRulesJSON, completion: nil)
+            ContentBlocker.installRuleList(into: webView, identifier: activeTab.contentBlockerIdentifier, rulesJSON: activeTab.contentBlockerRulesJSON, completion: nil)
         }
         DispatchQueue.main.async { [weak self] in
             self?.parent.lastErrorDescription = nil
@@ -447,8 +445,8 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
         if Self.webSchemes.contains(scheme) {
             if shouldRedirectHomeTimelineToNotifications(url) {
-                recordProgrammaticRequest(profile.startURL)
-                webView.load(URLRequest(url: profile.startURL))
+                recordProgrammaticRequest(activeTab.startURL)
+                webView.load(URLRequest(url: activeTab.startURL))
                 decisionHandler(.cancel)
                 return
             }
@@ -461,16 +459,14 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        // Map custom schemes to https if profile supports it
-        if let mapped = profile.mapDeepLinkToHTTPS(url) {
+        if let mapped = activeTab.mapDeepLinkToHTTPS(url) {
             webView.load(URLRequest(url: mapped))
             decisionHandler(.cancel)
             return
         }
 
-        // echodotapp:// mapping (kept same behavior by default)
         if scheme == "echodotapp" {
-            if let mapped = profile.mapEchoDotAppToHTTPS(url) {
+            if let mapped = activeTab.mapEchoDotAppToHTTPS(url) {
                 webView.load(URLRequest(url: mapped))
             }
             decisionHandler(.cancel)
@@ -551,7 +547,7 @@ private extension Coordinator {
 
     func isInternalHost(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
-        return profile.canonicalHosts.contains(host)
+        return activeTab.canonicalHosts.contains(host)
     }
 
     func shouldRedirectHomeTimelineToNotifications(_ url: URL) -> Bool {
@@ -595,8 +591,10 @@ extension Coordinator {
         switch incomingScheme {
         case "x-safari-http":
             mappedScheme = "http"
+
         case "x-safari-https":
             mappedScheme = "https"
+
         default:
             return nil
         }
@@ -629,7 +627,6 @@ extension Coordinator {
         return URL(string: normalized)
     }
 
-    // Existing helpers kept for X profile
     static func mapTwitterDeepLinkToHTTPS(url: URL) -> URL? {
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
@@ -727,7 +724,6 @@ enum ContentBlocker {
         }
     }
 
-    // Keep Bluesky rules separate from the original X/Twitter rules.
     static let blueskyRulesJSON = """
     [
       {
@@ -749,8 +745,7 @@ enum ContentBlocker {
     ]
     """
 
-    // Keep the original X/Twitter rules available for XSiteProfile
-    static let defaultRulesJSON = """
+    static let xRulesJSON = """
     [
       {
         "trigger": { "url-filter": ".*", "if-domain": ["x.com", "twitter.com"] },

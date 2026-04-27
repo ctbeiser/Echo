@@ -3,8 +3,8 @@
 //  solipsistweets
 //
 
-import SwiftUI
 import Combine
+import SwiftUI
 
 @MainActor
 final class SocialAccountStore: ObservableObject {
@@ -45,10 +45,6 @@ final class SocialAccountStore: ObservableObject {
         }
     }
 
-    var hasMultipleTabs: Bool {
-        configuredTabs.count > 1
-    }
-
     var nextTab: SocialTab? {
         guard let currentIndex = configuredTabs.firstIndex(of: activeTab), configuredTabs.count > 1 else { return nil }
         let nextIndex = configuredTabs.index(after: currentIndex)
@@ -57,10 +53,6 @@ final class SocialAccountStore: ObservableObject {
 
     var missingTabs: [SocialTab] {
         SocialTab.allCases.filter { !configuredTabs.contains($0) }
-    }
-
-    var activeProfile: any SiteProfile {
-        activeTab.profile
     }
 
     func completeInitialChoice(_ tabs: [SocialTab]) {
@@ -133,7 +125,7 @@ struct SolipsistweetsApp: App {
     init() {
         let accountStore = SocialAccountStore()
         _accountStore = StateObject(wrappedValue: accountStore)
-        _requestedURL = State(initialValue: accountStore.activeProfile.startURL)
+        _requestedURL = State(initialValue: accountStore.activeTab.startURL)
     }
 
     var body: some Scene {
@@ -143,7 +135,7 @@ struct SolipsistweetsApp: App {
                 .environmentObject(accountStore)
                 .onOpenURL { url in
                     guard url.scheme?.lowercased() == "echodotapp" else { return }
-                    if let mapped = XSiteProfile().mapEchoDotAppToHTTPS(url) {
+                    if let mapped = SocialTab.x.mapEchoDotAppToHTTPS(url) {
                         accountStore.add(.x)
                         accountStore.activeTab = .x
                         requestedURL = mapped
@@ -176,41 +168,41 @@ private struct SocialWebContainer: View {
             if accountStore.isPresentingInitialChoice {
                 AccountChoiceView(title: "Which accounts would you like to use?", subtitle: "Choose X, Bluesky, or both to get started.") { tabs in
                     accountStore.completeInitialChoice(tabs)
-                    requestedURL = accountStore.activeProfile.startURL
+                    requestedURL = accountStore.activeTab.startURL
                 }
-            } else if !accountStore.activeProfile.canonicalHosts.contains(requestedURL.host?.lowercased() ?? "") {
+            } else if !accountStore.activeTab.canonicalHosts.contains(requestedURL.host?.lowercased() ?? "") {
                 Color.clear
                     .onAppear {
-                        requestedURL = accountStore.activeProfile.startURL
+                        requestedURL = accountStore.activeTab.startURL
                     }
             } else {
                 ContentView(
                     requestedURL: $requestedURL,
-                    profile: accountStore.activeProfile,
+                    activeTab: accountStore.activeTab,
                     switcherIcon: accountStore.nextTab?.emoji,
                     removableTabs: accountStore.configuredTabs,
                     setupTabs: accountStore.missingTabs,
                     onSwitchTab: {
                         accountStore.switchToNextTab()
-                        requestedURL = accountStore.activeProfile.startURL
+                        requestedURL = accountStore.activeTab.startURL
                     },
                     onRemoveTab: { tab in
                         let removedActiveTab = tab == accountStore.activeTab
                         accountStore.remove(tab)
                         if removedActiveTab {
-                            requestedURL = accountStore.activeProfile.startURL
+                            requestedURL = accountStore.activeTab.startURL
                         }
                     },
                     onSetupTab: { tab in
                         accountStore.add(tab)
-                        requestedURL = accountStore.activeProfile.startURL
+                        requestedURL = accountStore.activeTab.startURL
                     }
                 )
                 .id(accountStore.activeTab)
                 .alert("Bluesky Support Is Here", isPresented: $accountStore.isPresentingUpgradePrompt) {
                     Button("Set Up Bluesky") {
                         accountStore.acceptBlueskyUpgrade()
-                        requestedURL = accountStore.activeProfile.startURL
+                        requestedURL = accountStore.activeTab.startURL
                     }
                     Button("Keep Using Twitter / X", role: .cancel) {
                         accountStore.declineBlueskyUpgrade()
@@ -221,7 +213,7 @@ private struct SocialWebContainer: View {
             }
         }
         .onChange(of: accountStore.activeTab) { _, _ in
-            requestedURL = accountStore.activeProfile.startURL
+            requestedURL = accountStore.activeTab.startURL
         }
     }
 }

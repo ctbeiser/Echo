@@ -4,33 +4,33 @@
 
 Use the fastest verification script that covers the files you touched.
 
-Use Verify Fast (`scripts/verify-fast.sh`) for changes isolated to one app target. Set `SCHEME=orion` when the change only needs the Orion target; otherwise the script defaults to `solipsistweets`.
+Use Verify Fast (`scripts/verify-fast.sh`) for changes isolated to the app target. The script defaults to the `solipsistweets` scheme.
 
-Use Verify Full (`scripts/verify-full.sh`) when a change touches shared Swift files under `solipsistweets/`, project settings, build scripts, assets used by both apps, or anything that should compile for both app schemes. It builds the shared `Verify Full` scheme, which compiles both app targets in one Xcode invocation. This repository has two app schemes, `solipsistweets` and `orion`, and no watch target.
+Use Verify Full (`scripts/verify-full.sh`) when a change touches project settings, build scripts, or anything that should use the full verification path. It builds the `Verify Full` scheme. This repository has one app scheme, `solipsistweets`, and no watch target.
 
-For production-scheme validation such as app packaging, project wiring, signing-sensitive behavior, platform support, or release-only settings, run the affected shared Xcode scheme directly with the needed destination/configuration. There is no separate watch/full verification script in this repo.
+For production-scheme validation such as app packaging, project wiring, signing-sensitive behavior, platform support, or release-only settings, run the affected Xcode scheme directly with the needed destination/configuration. There is no separate watch/full verification script in this repo.
 
 All verification scripts use repo-local `DerivedData/`, pass `-disableAutomaticPackageResolution`, disable the compiler index store with `COMPILER_INDEX_STORE_ENABLE=NO`, disable debug dylib generation with `ENABLE_DEBUG_DYLIB=NO`, disable testability with `ENABLE_TESTABILITY=NO`, disable previews/string-symbol/localized-string generation, and use simulator-only no-signing settings `CODE_SIGNING_ALLOWED=NO` plus `CODE_SIGN_STYLE=Manual`. This repo currently has no SwiftPM package dependencies; do not add package-resolution/cache infrastructure unless dependencies are introduced.
 
 For simulator builds, the app-only and fast verification scripts constrain `ARCHS` to the host architecture by default to avoid building unused simulator slices. Override with `BUILD_ARCHS=...` only when broader simulator architecture coverage is intentional.
 
-For build timing, use `scripts/time-build.sh`. It keeps timing build products under `.context/build-timing/` and enables Xcode's build timing summary. By default it times a clean `build` of the `Verify Full` scheme; set `SCHEME=orion`, `BUILD_ACTION=build-for-testing`, or `CLEAN=0` when needed.
+For build timing, use `scripts/time-build.sh`. It keeps timing build products under `.context/build-timing/` and enables Xcode's build timing summary. By default it times a clean `build` of the `Verify Full` scheme; set `BUILD_ACTION=build-for-testing` or `CLEAN=0` when needed.
 
 ## Tests
 
 This repo does not maintain unit-test or UI-test targets, and tests are not part of routine development here. Do not add test targets, test schemes, test plans, XCTest/Testing dependencies, or test source folders as part of normal changes.
 
-New code still needs verification. Use the fastest verification script that covers the files touched, and broaden to Verify Full (`scripts/verify-full.sh`) when the change affects shared code, project settings, or both app targets.
+New code still needs verification. Use the fastest verification script that covers the files touched, and broaden to Verify Full (`scripts/verify-full.sh`) when the change affects project settings or build behavior.
 
 If a future change truly requires executable tests, first document why build, lint, and manual verification are insufficient and why the behavior can be tested with lower risk than leaving it untested. Keep that testing infrastructure scoped to the need and update this guidance in the same change.
 
 ## Project Settings
 
-Keep app targets on Swift 6 language mode with warnings as errors, complete strict concurrency, strict memory safety, and explicit `any` existential checking. Do not weaken these settings to make a change compile; fix the source issue or document why a temporary exception is required.
+Keep the app target on Swift 6 language mode with warnings as errors, complete strict concurrency, strict memory safety, and explicit `any` existential checking. Do not weaken these settings to make a change compile; fix the source issue or document why a temporary exception is required.
 
 Keep fast-build overhead low without bypassing lint: Xcode target lint phases run `scripts/swiftlint.sh build` with explicit config/script/source-directory inputs and stamp outputs so Xcode controls dependency analysis. Verification scripts apply build-test overrides to disable previews, testability, generated string catalog symbols, and localized string emission; real app schemes keep the Moods-style real-build settings.
 
-Keep launch schemes useful for debugging. Shared launch schemes should reduce system log noise and make invalid geometry reports actionable when possible.
+Keep launch schemes useful for debugging. Launch schemes should reduce system log noise and make invalid geometry reports actionable when possible.
 
 Release app products should validate products during build. Keep `VALIDATE_PRODUCT = YES` for production release targets.
 
