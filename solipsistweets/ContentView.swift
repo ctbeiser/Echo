@@ -138,24 +138,39 @@ struct ContentView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let switcherIcon {
-                Text(switcherIcon)
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-                    .liquidGlass(in: Circle())
-                    .scaleEffect(isSwitcherPressed ? 0.9 : 1)
-                    .padding(.top, 4)
-                    .padding(.trailing, 50)
-                    .onTapGesture {
-                        onSwitchTab?()
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                        isSwitcherPressed = false
                     }
-                    .onLongPressGesture(
-                        minimumDuration: 0.7,
-                        maximumDistance: 44,
-                        pressing: updateSwitcherPressState,
-                        perform: presentRemoveTabChoices
-                    )
-                    .accessibilityLabel("Switch account")
-                    .accessibilityAddTraits(.isButton)
+                    onSwitchTab?()
+                } label: {
+                    Text(switcherIcon)
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(in: Circle())
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                        .font(.caption2)
+                        .symbolRenderingMode(.hierarchical)
+                        .padding(4)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .scaleEffect(isSwitcherPressed ? 0.9 : 1)
+                .padding(.top, 4)
+                .padding(.trailing, 50)
+                .onLongPressGesture(
+                    minimumDuration: 0.7,
+                    maximumDistance: 44,
+                    pressing: updateSwitcherPressState,
+                    perform: presentRemoveTabChoices
+                )
+                .accessibilityLabel("Switch app")
+                .accessibilityHint("Double-tap to switch. Long press to remove tabs.")
+                .accessibilityAddTraits(.isButton)
             }
         }
         .onAppear {
