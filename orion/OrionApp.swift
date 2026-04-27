@@ -5,7 +5,7 @@ struct OrionApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var requestedURL: URL = RedditSiteProfile().startURL
     @StateObject private var screenTimeTracker = OnScreenTimeTracker()
-    private let profile: SiteProfile = RedditSiteProfile()
+    private let profile: any SiteProfile = RedditSiteProfile()
 
     var body: some Scene {
         WindowGroup {

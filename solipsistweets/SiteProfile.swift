@@ -29,6 +29,42 @@ private enum SharedUserAgent {
     }
 }
 
+
+enum SocialTab: String, CaseIterable, Identifiable {
+    case x
+    case bluesky
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .x: return "Twitter / X"
+        case .bluesky: return "Bluesky"
+        }
+    }
+
+    var setupTitle: String {
+        switch self {
+        case .x: return "Set Up X"
+        case .bluesky: return "Set Up Bluesky"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .x: return "🐦"
+        case .bluesky: return "🦋"
+        }
+    }
+
+    var profile: any SiteProfile {
+        switch self {
+        case .x: return XSiteProfile()
+        case .bluesky: return BlueskySiteProfile()
+        }
+    }
+}
+
 protocol SiteProfile {
     // Hosts that are considered “internal” and should open in-app
     var canonicalHosts: Set<String> { get }
@@ -55,6 +91,16 @@ struct XSiteProfile: SiteProfile {
     func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { Coordinator.mapEchoDotAppToHTTPS(url: url) }
     var contentBlockerIdentifier: String { "com.solipsistweets.ContentBlocker.rules.v11" }
     var contentBlockerRulesJSON: String { ContentBlocker.defaultRulesJSON }
+}
+
+struct BlueskySiteProfile: SiteProfile {
+    let canonicalHosts: Set<String> = ["cope.works", "www.cope.works"]
+    var startURL: URL { URL(string: "https://cope.works/notifications")! }
+    var userAgent: String { SharedUserAgent.mobileSafariCurrentDevice }
+    func mapDeepLinkToHTTPS(_ url: URL) -> URL? { nil }
+    func mapEchoDotAppToHTTPS(_ url: URL) -> URL? { nil }
+    var contentBlockerIdentifier: String { "com.solipsistweets.ContentBlocker.bluesky.rules.v4" }
+    var contentBlockerRulesJSON: String { ContentBlocker.blueskyRulesJSON }
 }
 
 struct RedditSiteProfile: SiteProfile {
