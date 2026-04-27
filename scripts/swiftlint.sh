@@ -55,8 +55,17 @@ case "$MODE" in
       --quiet \
       "$@"
     ;;
+  lint-autofix)
+    swiftlint lint \
+      --config "$ROOT_DIR/.swiftlint-autofix.yml" \
+      --working-directory "$ROOT_DIR" \
+      --strict \
+      --quiet \
+      --reporter xcode \
+      "$@"
+    ;;
   *)
-    echo "usage: $0 [build|lint|fix] [paths...]" >&2
+    echo "usage: $0 [build|lint|fix|autofix|lint-autofix] [paths...]" >&2
     exit 64
     ;;
 esac

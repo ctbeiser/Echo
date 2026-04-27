@@ -42,11 +42,15 @@ Keep `ENABLE_USER_SCRIPT_SANDBOXING = NO`; project build phases may need access 
 
 Keep DerivedData local to the worktree at `DerivedData/`. It is ignored by Git.
 
+For a new worktree, `scripts/seed-derived-data.sh` can copy a warm sibling `DerivedData/` using APFS clone-copy semantics when available, then removes path-sensitive build state. Install the optional best-effort hooks with `scripts/install-git-hooks.sh`; the post-checkout hook seeds DerivedData if absent without blocking checkout on failure.
+
 ## Lint
 
 SwiftLint is configured with focused safety/correctness rules in `.swiftlint.yml` and runs in strict mode. Broad size/name/shape rules and current style-only noise are disabled so formatting preferences do not drown out safety checks or block routine builds.
 
-Run build-time lint with `scripts/swiftlint.sh build`; Xcode target phases run the same command during verification builds. Missing SwiftLint is a local warning but a CI error. Run the base config directly with `scripts/swiftlint.sh lint`. Run autofix-only style cleanup with `scripts/swiftlint.sh fix`. Keep broad style gates out of strict lint unless existing code is baselined or fixed separately.
+Run build-time lint with `scripts/swiftlint.sh build`; Xcode target phases run the same command during verification builds. Missing SwiftLint is a local warning but a CI error. Run the base config directly with `scripts/swiftlint.sh lint`. Run autofix-only style cleanup with `scripts/swiftlint.sh fix`.
+
+Install the optional pre-commit hook with `scripts/install-git-hooks.sh`; it sets `core.hooksPath` to `scripts/git-hooks`, runs the separate `.swiftlint-autofix.yml` path with SwiftLint `--fix --format` on staged Swift files, re-stages fixes, and aborts if a staged Swift file also has unstaged edits. Keep broad style gates out of strict lint unless existing code is baselined or fixed separately.
 
 ## Source Practices
 

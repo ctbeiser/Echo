@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+staged_swift_files=()
+while IFS= read -r -d '' staged; do
+  staged_swift_files+=("$staged")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR -- '*.swift')
+
+if [[ "${#staged_swift_files[@]}" -eq 0 ]]; then
+  exit 0
+fi
+
+unstaged_swift_files=()
+while IFS= read -r -d '' unstaged; do
+  unstaged_swift_files+=("$unstaged")
+done < <(git diff --name-only -z -- '*.swift')
+
+for ((staged_index = 0; staged_index < ${#staged_swift_files[@]}; staged_index++)); do
+  staged="${staged_swift_files[$staged_index]}"
+  for ((unstaged_index = 0; unstaged_index < ${#unstaged_swift_files[@]}; unstaged_index++)); do
+    unstaged="${unstaged_swift_files[$unstaged_index]}"
+    if [[ "$staged" == "$unstaged" ]]; then
+      echo "error: $staged has both staged and unstaged edits; stage or stash one side before committing." >&2
+      exit 1
+    fi
+  done
+done
+
+"$repo_root/scripts/swiftlint.sh" autofix "${staged_swift_files[@]}"
+git add -- "${staged_swift_files[@]}"
+
+"$repo_root/scripts/swiftlint.sh" lint-autofix "${staged_swift_files[@]}"
+"$repo_root/scripts/swiftlint.sh" build "${staged_swift_files[@]}"
