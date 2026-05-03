@@ -13,18 +13,19 @@ struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
     private static let testFlightURL = URL.required(string: "https://testflight.apple.com/join/N3DtJcgD")
     @Binding var requestedURL: URL
-    @State private var isLoading: Bool = true
-    @State private var lastErrorDescription: String?
     @StateObject private var shakeDetector = ShakeDetector()
     @State private var showShareBanner = false
     @State private var isShareSheetPresented = false
     @State private var hideShareBannerTask: Task<Void, Never>?
     @State private var showRemoveCurrentTabConfirmation = false
     @State private var isSwitcherPressed = false
+    @State private var switchProgress: CGFloat = 0
+    @State private var switchCompletionTask: Task<Void, Never>?
+    @State private var requestedURLsByTab: [SocialTab: URL] = [:]
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
     let activeTab: SocialTab
-    var switcherIcon: String?
+    var nextTab: SocialTab?
     var removableTabs: [SocialTab] = []
     var setupTabs: [SocialTab] = []
     var onSwitchTab: (() -> Void)?
@@ -34,7 +35,7 @@ struct ContentView: View {
     init(
         requestedURL: Binding<URL>,
         activeTab: SocialTab,
-        switcherIcon: String? = nil,
+        nextTab: SocialTab? = nil,
         removableTabs: [SocialTab] = [],
         setupTabs: [SocialTab] = [],
         onSwitchTab: (() -> Void)? = nil,
@@ -43,7 +44,7 @@ struct ContentView: View {
     ) {
         _requestedURL = requestedURL
         self.activeTab = activeTab
-        self.switcherIcon = switcherIcon
+        self.nextTab = nextTab
         self.removableTabs = removableTabs
         self.setupTabs = setupTabs
         self.onSwitchTab = onSwitchTab
@@ -53,24 +54,73 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            WebView(url: requestedURL, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, activeTab: activeTab)
-                .ignoresSafeArea(edges: [.bottom])
+            flipDeck
 
-            if isLoading {
-                ProgressView()
-                    .progressViewStyle(.circular)
+            if let nextTab {
+                SideSwitcherControl(
+                    tab: nextTab,
+                    activeTab: activeTab,
+                    progress: switchProgress,
+                    isPressed: isSwitcherPressed,
+                    onTap: beginSwitcherTap,
+                    onDragChanged: updateSwitchDrag,
+                    onDragEnded: finishSwitchDrag,
+                    onPressing: updateSwitcherPressState,
+                    onLongPress: presentRemoveTabChoices
+                )
             }
         }
-        .overlay(alignment: .bottom) {
-            if let lastErrorDescription {
-                Text(lastErrorDescription)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
-                    .padding(.horizontal)
-                    .allowsHitTesting(false)
+        .onAppear {
+            prepareVisibleTabURLs()
+            shakeDetector.start()
+        }
+        .onDisappear {
+            shakeDetector.stop()
+            switchCompletionTask?.cancel()
+            hideShareBannerTask?.cancel()
+        }
+        .onChange(of: shakeDetector.shakeCount) { _, _ in
+            presentShareBanner()
+        }
+        .onChange(of: requestedURL) { _, _ in
+            requestedURLsByTab[activeTab] = requestedURL
+        }
+        .onChange(of: activeTab) { _, _ in
+            prepareVisibleTabURLs()
+        }
+        .sheet(isPresented: $isShareSheetPresented) {
+            ShareSheet(activityItems: [Self.testFlightURL])
+        }
+        .confirmationDialog("Remove a tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
+            ForEach(removeTabChoices) { tab in
+                Button(tab.removeActionTitle, role: .destructive) {
+                    onRemoveTab?(tab)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                showRemoveCurrentTabConfirmation = false
             }
         }
+    }
+
+    private var flipDeck: some View {
+        ZStack {
+            ForEach(visibleTabs) { tab in
+                TabWebSurface(url: urlBinding(for: tab), tab: tab)
+                    .opacity(opacity(for: tab))
+                    .rotation3DEffect(
+                        .degrees(rotationDegrees(for: tab)),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.68
+                    )
+                    .zIndex(zIndex(for: tab))
+                    .allowsHitTesting(tab == activeTab && switchProgress < 0.02)
+            }
+        }
+        .scaleEffect(1 - (0.035 * sin(Double(switchProgress) * .pi)))
+        .animation(.interactiveSpring(response: 0.28, dampingFraction: 0.86), value: switchProgress)
+        .allowsHitTesting(switchProgress < 0.02)
+        .ignoresSafeArea(edges: [.bottom])
         .overlay {
             if shouldShowScreenTimeBadge {
                 Text(formatDuration(screenTimeTracker.secondsToday))
@@ -135,65 +185,11 @@ struct ContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if let switcherIcon {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isSwitcherPressed = false
-                    }
-                    onSwitchTab?()
-                } label: {
-                    Text(switcherIcon)
-                        .font(.title3)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .liquidGlass(in: Circle())
-                .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
-                        .font(.caption2)
-                        .symbolRenderingMode(.hierarchical)
-                        .padding(4)
-                        .background(.ultraThinMaterial, in: Circle())
-                }
-                .scaleEffect(isSwitcherPressed ? 0.9 : 1)
-                .padding(.top, 4)
-                .padding(.trailing, 50)
-                .onLongPressGesture(
-                    minimumDuration: 0.7,
-                    maximumDistance: 44,
-                    pressing: updateSwitcherPressState,
-                    perform: presentRemoveTabChoices
-                )
-                .accessibilityLabel("Switch app")
-                .accessibilityHint("Double-tap to switch. Long press to remove tabs.")
-                .accessibilityAddTraits(.isButton)
-            }
-        }
-        .onAppear {
-            shakeDetector.start()
-        }
-        .onDisappear {
-            shakeDetector.stop()
-            hideShareBannerTask?.cancel()
-        }
-        .onChange(of: shakeDetector.shakeCount) { _, _ in
-            presentShareBanner()
-        }
-        .sheet(isPresented: $isShareSheetPresented) {
-            ShareSheet(activityItems: [Self.testFlightURL])
-        }
-        .confirmationDialog("Remove a tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
-            ForEach(removeTabChoices) { tab in
-                Button(tab.removeActionTitle, role: .destructive) {
-                    onRemoveTab?(tab)
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                showRemoveCurrentTabConfirmation = false
-            }
+    }
+
+    private var visibleTabs: [SocialTab] {
+        SocialTab.allCases.filter { tab in
+            tab == activeTab || tab == nextTab
         }
     }
 
@@ -211,6 +207,71 @@ struct ContentView: View {
 
     private var badgeBackgroundColor: Color {
         colorScheme == .dark ? .black : .white
+    }
+
+    private var frontRotationDegrees: Double {
+        switchDirection * 180 * Double(switchProgress)
+    }
+
+    private var backRotationDegrees: Double {
+        frontRotationDegrees - (switchDirection * 180)
+    }
+
+    private var switchDirection: Double {
+        activeTab == .x ? -1 : 1
+    }
+
+    private func prepareVisibleTabURLs() {
+        if requestedURLsByTab[activeTab] == nil {
+            requestedURLsByTab[activeTab] = requestedURL
+        }
+        if let nextTab, requestedURLsByTab[nextTab] == nil {
+            requestedURLsByTab[nextTab] = nextTab.startURL
+        }
+    }
+
+    private func urlBinding(for tab: SocialTab) -> Binding<URL> {
+        Binding(
+            get: {
+                requestedURLsByTab[tab] ?? (tab == activeTab ? requestedURL : tab.startURL)
+            },
+            set: { newURL in
+                requestedURLsByTab[tab] = newURL
+                if tab == activeTab {
+                    requestedURL = newURL
+                }
+            }
+        )
+    }
+
+    private func opacity(for tab: SocialTab) -> Double {
+        if tab == activeTab {
+            return switchProgress <= 0.5 ? 1 : 0
+        }
+        if tab == nextTab {
+            return switchProgress > 0.5 ? 1 : 0
+        }
+        return 0
+    }
+
+    private func rotationDegrees(for tab: SocialTab) -> Double {
+        if tab == activeTab {
+            return frontRotationDegrees
+        }
+        if tab == nextTab {
+            return backRotationDegrees
+        }
+        return 0
+    }
+
+    private func zIndex(for tab: SocialTab) -> Double {
+        if tab == activeTab {
+            return switchProgress <= 0.5 ? 1 : 0
+        }
+        if tab == nextTab {
+            return switchProgress > 0.5 ? 1 : 0
+        }
+        return -1
     }
 
     private func presentShareBanner() {
@@ -248,12 +309,202 @@ struct ContentView: View {
         }
     }
 
+    private func beginSwitcherTap() {
+        guard nextTab != nil else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        completeSwitch()
+    }
+
+    private func updateSwitchDrag(_ translationWidth: CGFloat, screenWidth: CGFloat) {
+        guard nextTab != nil else { return }
+        switchCompletionTask?.cancel()
+        let progress = switchProgress(for: translationWidth, screenWidth: screenWidth)
+        withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.82)) {
+            isSwitcherPressed = true
+            switchProgress = progress
+        }
+    }
+
+    private func finishSwitchDrag(_ translationWidth: CGFloat, predictedTranslationWidth: CGFloat, screenWidth: CGFloat) {
+        guard nextTab != nil else { return }
+        let progress = switchProgress(for: translationWidth, screenWidth: screenWidth)
+        let predictedProgress = switchProgress(for: predictedTranslationWidth, screenWidth: screenWidth)
+        if max(progress, predictedProgress) >= 0.48 {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            completeSwitch()
+        } else {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                switchProgress = 0
+                isSwitcherPressed = false
+            }
+        }
+    }
+
+    private func switchProgress(for translationWidth: CGFloat, screenWidth: CGFloat) -> CGFloat {
+        let signedTranslation = activeTab == .x ? -translationWidth : translationWidth
+        let travelDistance = max(screenWidth * 0.72, 180)
+        return min(max(signedTranslation / travelDistance, 0), 1)
+    }
+
+    private func completeSwitch() {
+        switchCompletionTask?.cancel()
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            switchProgress = 1
+            isSwitcherPressed = false
+        }
+        switchCompletionTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 340_000_000)
+            guard !Task.isCancelled else { return }
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            transaction.animation = nil
+            withTransaction(transaction) {
+                onSwitchTab?()
+                switchProgress = 0
+            }
+            switchCompletionTask = nil
+        }
+    }
+
     private func presentRemoveTabChoices() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.bouncy(duration: 0.42, extraBounce: 0.22)) {
             isSwitcherPressed = false
         }
         showRemoveCurrentTabConfirmation = true
+    }
+}
+
+private struct TabWebSurface: View {
+    @Binding var url: URL
+    let tab: SocialTab
+    @State private var isLoading = true
+    @State private var lastErrorDescription: String?
+
+    var body: some View {
+        ZStack {
+            WebView(url: url, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, activeTab: tab)
+                .ignoresSafeArea(edges: [.bottom])
+
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(.circular)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if let lastErrorDescription {
+                Text(lastErrorDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+                    .padding(.horizontal)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+}
+
+private struct SideSwitcherControl: View {
+    private let diameter: CGFloat = 86
+    private let glyphSize: CGFloat = 24
+    private let edgeIconOffset: CGFloat = 8
+
+    let tab: SocialTab
+    let activeTab: SocialTab
+    let progress: CGFloat
+    let isPressed: Bool
+    let onTap: () -> Void
+    let onDragChanged: (CGFloat, CGFloat) -> Void
+    let onDragEnded: (CGFloat, CGFloat, CGFloat) -> Void
+    let onPressing: (Bool) -> Void
+    let onLongPress: () -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            button
+                .position(x: xPosition(in: proxy.size.width), y: proxy.size.height * 0.5)
+                .gesture(
+                    DragGesture(minimumDistance: 4, coordinateSpace: .global)
+                        .onChanged { value in
+                            onDragChanged(value.translation.width, proxy.size.width)
+                        }
+                        .onEnded { value in
+                            onDragEnded(value.translation.width, value.predictedEndTranslation.width, proxy.size.width)
+                        }
+                )
+                .onTapGesture(perform: onTap)
+                .onLongPressGesture(
+                    minimumDuration: 0.7,
+                    maximumDistance: 44,
+                    pressing: onPressing,
+                    perform: onLongPress
+                )
+                .accessibilityLabel("Switch to \(tab.displayName)")
+                .accessibilityHint("Drag across the screen to flip apps. Long press to remove tabs.")
+                .accessibilityAddTraits(.isButton)
+        }
+        .ignoresSafeArea()
+    }
+
+    private var button: some View {
+        ZStack {
+            Text(tab.emoji)
+                .font(.system(size: glyphSize))
+                .frame(width: diameter, height: diameter)
+                .offset(x: iconHorizontalOffset)
+                .opacity(progress <= 0.5 ? 1 : 0)
+                .rotation3DEffect(
+                    .degrees(iconFrontRotationDegrees),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.68
+                )
+
+            Text(activeTab.emoji)
+                .font(.system(size: glyphSize))
+                .frame(width: diameter, height: diameter)
+                .offset(x: iconHorizontalOffset)
+                .opacity(progress > 0.5 ? 1 : 0)
+                .rotation3DEffect(
+                    .degrees(iconBackRotationDegrees),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.68
+                )
+        }
+        .frame(width: diameter, height: diameter)
+        .contentShape(Circle())
+        .liquidGlass(in: Circle())
+        .overlay {
+            Circle()
+                .stroke(.white.opacity(0.28), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 6)
+        .scaleEffect(isPressed ? 0.93 : 1)
+    }
+
+    private var iconFrontRotationDegrees: Double {
+        switchDirection * 180 * Double(progress)
+    }
+
+    private var iconBackRotationDegrees: Double {
+        iconFrontRotationDegrees - (switchDirection * 180)
+    }
+
+    private var switchDirection: Double {
+        activeTab == .x ? -1 : 1
+    }
+
+    private var iconHorizontalOffset: CGFloat {
+        let startOffset = activeTab == .x ? -edgeIconOffset : edgeIconOffset
+        let endOffset = -startOffset
+        return startOffset + ((endOffset - startOffset) * min(max(progress, 0), 1))
+    }
+
+    private func xPosition(in width: CGFloat) -> CGFloat {
+        let leading: CGFloat = 0
+        let trailing = width
+        let start = activeTab == .x ? trailing : leading
+        let end = activeTab == .x ? leading : trailing
+        return start + ((end - start) * min(max(progress, 0), 1))
     }
 }
 

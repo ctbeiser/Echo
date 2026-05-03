@@ -179,7 +179,7 @@ private struct SocialWebContainer: View {
                 ContentView(
                     requestedURL: $requestedURL,
                     activeTab: accountStore.activeTab,
-                    switcherIcon: accountStore.nextTab?.emoji,
+                    nextTab: accountStore.nextTab,
                     removableTabs: accountStore.configuredTabs,
                     setupTabs: accountStore.missingTabs,
                     onSwitchTab: {
@@ -198,7 +198,6 @@ private struct SocialWebContainer: View {
                         requestedURL = accountStore.activeTab.startURL
                     }
                 )
-                .id(accountStore.activeTab)
                 .alert("Bluesky Support Is Here", isPresented: $accountStore.isPresentingUpgradePrompt) {
                     Button("Set Up Bluesky") {
                         accountStore.acceptBlueskyUpgrade()
