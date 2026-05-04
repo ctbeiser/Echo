@@ -423,7 +423,7 @@ private struct SideSwitcherControl: View {
         GeometryReader { proxy in
             button
                 .position(x: xPosition(in: proxy.size.width), y: proxy.size.height * 0.5)
-                .gesture(
+                .simultaneousGesture(
                     DragGesture(minimumDistance: 4, coordinateSpace: .global)
                         .onChanged { value in
                             onDragChanged(value.translation.width, proxy.size.width)
