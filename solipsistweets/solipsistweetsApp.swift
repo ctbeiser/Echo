@@ -40,6 +40,12 @@ final class SocialAccountStore: ObservableObject {
             self.activeTab = fallback
             userDefaults.set(fallback.rawValue, forKey: Self.activeTabKey)
         }
+        if rawConfiguredTabs.isEmpty == false,
+           configuredTabs.contains(.bluesky) == false,
+           userDefaults.object(forKey: Self.didHandleBlueskyUpgradeKey) != nil,
+           userDefaults.bool(forKey: Self.didHandleBlueskyUpgradeKey) == false {
+            userDefaults.set(true, forKey: Self.didHandleBlueskyUpgradeKey)
+        }
         if !configuredTabs.contains(.bluesky), !userDefaults.bool(forKey: Self.didHandleBlueskyUpgradeKey) {
             self.isPresentingUpgradePrompt = true
         }
@@ -62,7 +68,7 @@ final class SocialAccountStore: ObservableObject {
         isPresentingInitialChoice = false
         persistTabs()
         userDefaults.set(activeTab.rawValue, forKey: Self.activeTabKey)
-        userDefaults.set(configuredTabs.contains(.bluesky), forKey: Self.didHandleBlueskyUpgradeKey)
+        userDefaults.set(true, forKey: Self.didHandleBlueskyUpgradeKey)
     }
 
     func add(_ tab: SocialTab) {

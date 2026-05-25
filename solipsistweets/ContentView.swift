@@ -62,11 +62,16 @@ struct ContentView: View {
                     activeTab: activeTab,
                     progress: switchProgress,
                     isPressed: isSwitcherPressed,
+                    isRemoveDialogPresented: $showRemoveCurrentTabConfirmation,
+                    removeTabChoices: removeTabChoices,
                     onTap: beginSwitcherTap,
                     onDragChanged: updateSwitchDrag,
                     onDragEnded: finishSwitchDrag,
                     onPressing: updateSwitcherPressState,
-                    onLongPress: presentRemoveTabChoices
+                    onLongPress: presentRemoveTabChoices,
+                    onRemoveTab: { tab in
+                        onRemoveTab?(tab)
+                    }
                 )
             }
         }
@@ -90,16 +95,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isShareSheetPresented) {
             ShareSheet(activityItems: [Self.testFlightURL])
-        }
-        .confirmationDialog("Remove a tab?", isPresented: $showRemoveCurrentTabConfirmation, titleVisibility: .visible) {
-            ForEach(removeTabChoices) { tab in
-                Button(tab.removeActionTitle, role: .destructive) {
-                    onRemoveTab?(tab)
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                showRemoveCurrentTabConfirmation = false
-            }
         }
     }
 
@@ -365,7 +360,7 @@ struct ContentView: View {
 
     private func switchProgress(for translationWidth: CGFloat, screenWidth: CGFloat) -> CGFloat {
         let signedTranslation = activeTab == .x ? -translationWidth : translationWidth
-        let travelDistance = max(screenWidth * 0.72, 180)
+        let travelDistance = max(screenWidth, 1)
         return min(max(signedTranslation / travelDistance, 0), 1)
     }
 
@@ -431,42 +426,123 @@ private struct SideSwitcherControl: View {
     private let diameter: CGFloat = 86
     private let glyphSize: CGFloat = 24
     private let edgeIconOffset: CGFloat = 8
+    private let verticalEdgePadding: CGFloat = 12
+    private let longPressMinimumDuration: TimeInterval = 0.5
+    private let longPressMaximumDistance: CGFloat = 10
+    private let removePopoverWidth: CGFloat = 240
+    private let removePopoverEstimatedHeight: CGFloat = 128
+    private let removePopoverSpacing: CGFloat = 12
+    private let removePopoverScreenPadding: CGFloat = 8
 
     let tab: SocialTab
     let activeTab: SocialTab
     let progress: CGFloat
     let isPressed: Bool
+    @Binding var isRemoveDialogPresented: Bool
+    let removeTabChoices: [SocialTab]
     let onTap: () -> Void
     let onDragChanged: (CGFloat, CGFloat) -> Void
     let onDragEnded: (CGFloat, CGFloat, CGFloat) -> Void
     let onPressing: (Bool) -> Void
     let onLongPress: () -> Void
+    let onRemoveTab: (SocialTab) -> Void
+    @AppStorage("sideSwitcherVerticalPlacement") private var verticalPlacement = 0.5
+    @State private var isDraggingSwitcher = false
+    @State private var dragStartVerticalPlacement = 0.5
 
     var body: some View {
         GeometryReader { proxy in
-            button
-                .position(x: xPosition(in: proxy.size.width), y: proxy.size.height * 0.5)
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 4, coordinateSpace: .global)
-                        .onChanged { value in
-                            onDragChanged(value.translation.width, proxy.size.width)
+            ZStack {
+                if isRemoveDialogPresented {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeOut(duration: 0.16)) {
+                                isRemoveDialogPresented = false
+                            }
                         }
-                        .onEnded { value in
-                            onDragEnded(value.translation.width, value.predictedEndTranslation.width, proxy.size.width)
-                        }
-                )
-                .onTapGesture(perform: onTap)
-                .onLongPressGesture(
-                    minimumDuration: 0.7,
-                    maximumDistance: 44,
-                    pressing: onPressing,
-                    perform: onLongPress
-                )
-                .accessibilityLabel("Switch to \(tab.displayName)")
-                .accessibilityHint("Drag across the screen to flip apps. Long press to remove tabs.")
-                .accessibilityAddTraits(.isButton)
+                }
+
+                button
+                    .overlay {
+                        LongPressRecognizer(
+                            minimumPressDuration: longPressMinimumDuration,
+                            allowableMovement: longPressMaximumDistance,
+                            onBegan: onLongPress
+                        )
+                    }
+                    .position(x: xPosition(in: proxy.size.width), y: yPosition(in: proxy.size.height))
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 4, coordinateSpace: .global)
+                            .onChanged { value in
+                                handleDragChanged(value, in: proxy.size)
+                            }
+                            .onEnded { value in
+                                handleDragEnded(value, in: proxy.size)
+                            }
+                    )
+                    .onTapGesture(perform: onTap)
+                    .accessibilityLabel("Switch to \(tab.displayName)")
+                    .accessibilityHint("Drag across the screen to flip apps. Drag up or down to move the switcher. Long press to remove tabs.")
+                    .accessibilityAddTraits(.isButton)
+
+                if isRemoveDialogPresented {
+                    removePopover(in: proxy.size)
+                        .zIndex(1)
+                }
+            }
+            .animation(
+                .spring(response: 0.24, dampingFraction: 0.86),
+                value: isRemoveDialogPresented
+            )
         }
         .ignoresSafeArea()
+    }
+
+    private func removePopover(in size: CGSize) -> some View {
+        SwitcherRemovePopover(
+            choices: removeTabChoices,
+            arrowEdge: popoverArrowEdge,
+            onRemoveTab: { tab in
+                withAnimation(.easeOut(duration: 0.16)) {
+                    isRemoveDialogPresented = false
+                }
+                onRemoveTab(tab)
+            }
+        )
+        .frame(width: removePopoverWidth)
+        .position(
+            x: removePopoverXPosition(in: size.width),
+            y: removePopoverYPosition(in: size.height)
+        )
+    }
+
+    private var popoverArrowEdge: Edge {
+        activeTab == .x ? .trailing : .leading
+    }
+
+    private func removePopoverXPosition(in width: CGFloat) -> CGFloat {
+        let buttonX = xPosition(in: width)
+        let buttonHalfWidth = diameter * 0.5
+        let popoverHalfWidth = removePopoverWidth * 0.5
+        let idealX: CGFloat
+        if activeTab == .x {
+            idealX = buttonX - buttonHalfWidth - removePopoverSpacing - popoverHalfWidth
+        } else {
+            idealX = buttonX + buttonHalfWidth + removePopoverSpacing + popoverHalfWidth
+        }
+        return min(
+            max(idealX, popoverHalfWidth + removePopoverScreenPadding),
+            width - popoverHalfWidth - removePopoverScreenPadding
+        )
+    }
+
+    private func removePopoverYPosition(in height: CGFloat) -> CGFloat {
+        let popoverHalfHeight = removePopoverEstimatedHeight * 0.5
+        return min(
+            max(yPosition(in: height), popoverHalfHeight + removePopoverScreenPadding),
+            height - popoverHalfHeight - removePopoverScreenPadding
+        )
     }
 
     private var button: some View {
@@ -521,12 +597,183 @@ private struct SideSwitcherControl: View {
         min(max(progress, 0), 1)
     }
 
+    private var verticalInset: CGFloat {
+        (diameter * 0.5) + verticalEdgePadding
+    }
+
+    private var clampedVerticalPlacement: Double {
+        min(max(verticalPlacement, 0), 1)
+    }
+
     private func xPosition(in width: CGFloat) -> CGFloat {
         let leading: CGFloat = 0
         let trailing = width
         let start = activeTab == .x ? trailing : leading
         let end = activeTab == .x ? leading : trailing
         return start + ((end - start) * clampedProgress)
+    }
+
+    private func yPosition(in height: CGFloat) -> CGFloat {
+        let range = verticalRange(in: height)
+        return range.min + ((range.max - range.min) * CGFloat(clampedVerticalPlacement))
+    }
+
+    private func verticalPlacement(for translationHeight: CGFloat, height: CGFloat) -> Double {
+        let range = verticalRange(in: height)
+        let travelDistance = max(range.max - range.min, 1)
+        let nextPlacement = dragStartVerticalPlacement + Double(translationHeight / travelDistance)
+        return min(max(nextPlacement, 0), 1)
+    }
+
+    private func verticalRange(in height: CGFloat) -> (min: CGFloat, max: CGFloat) {
+        let minY = min(verticalInset, height * 0.5)
+        let maxY = max(height - verticalInset, minY)
+        return (minY, maxY)
+    }
+
+    private func handleDragChanged(_ value: DragGesture.Value, in size: CGSize) {
+        if !isDraggingSwitcher {
+            let horizontalDistance = abs(value.translation.width)
+            let verticalDistance = abs(value.translation.height)
+            guard max(horizontalDistance, verticalDistance) > longPressMaximumDistance else { return }
+            isDraggingSwitcher = true
+            dragStartVerticalPlacement = verticalPlacement
+        }
+
+        withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.82)) {
+            verticalPlacement = verticalPlacement(for: value.translation.height, height: size.height)
+        }
+        onDragChanged(value.translation.width, size.width)
+    }
+
+    private func handleDragEnded(_ value: DragGesture.Value, in size: CGSize) {
+        guard isDraggingSwitcher else {
+            onPressing(false)
+            return
+        }
+
+        isDraggingSwitcher = false
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+            verticalPlacement = verticalPlacement(for: value.translation.height, height: size.height)
+        }
+        onDragEnded(value.translation.width, value.predictedEndTranslation.width, size.width)
+    }
+}
+
+private struct SwitcherRemovePopover: View {
+    let choices: [SocialTab]
+    let arrowEdge: Edge
+    let onRemoveTab: (SocialTab) -> Void
+
+    var body: some View {
+        contents
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.regularMaterial)
+            }
+            .overlay(alignment: arrowAlignment) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(.regularMaterial)
+                    .frame(width: 14, height: 14)
+                    .rotationEffect(.degrees(45))
+                    .offset(x: arrowOffset)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.primary.opacity(0.08), lineWidth: 0.5)
+            }
+            .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 10)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var contents: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Remove a tab?")
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 6)
+
+            ForEach(choices) { tab in
+                Button(role: .destructive) {
+                    onRemoveTab(tab)
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(tab.removeActionTitle)
+                        Spacer(minLength: 12)
+                        Image(systemName: "trash")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.bottom, 6)
+    }
+
+    private var arrowAlignment: Alignment {
+        arrowEdge == .leading ? .leading : .trailing
+    }
+
+    private var arrowOffset: CGFloat {
+        arrowEdge == .leading ? -5 : 5
+    }
+}
+
+private struct LongPressRecognizer: UIViewRepresentable {
+    let minimumPressDuration: TimeInterval
+    let allowableMovement: CGFloat
+    let onBegan: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onBegan: onBegan)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+
+        let recognizer = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress))
+        recognizer.minimumPressDuration = minimumPressDuration
+        recognizer.allowableMovement = allowableMovement
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = context.coordinator
+        view.addGestureRecognizer(recognizer)
+
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onBegan = onBegan
+        guard let recognizer = uiView.gestureRecognizers?.compactMap({ $0 as? UILongPressGestureRecognizer }).first else {
+            return
+        }
+        recognizer.minimumPressDuration = minimumPressDuration
+        recognizer.allowableMovement = allowableMovement
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onBegan: () -> Void
+
+        init(onBegan: @escaping () -> Void) {
+            self.onBegan = onBegan
+        }
+
+        @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began else { return }
+            onBegan()
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
     }
 }
 
@@ -616,12 +863,6 @@ final class ShakeDetector: ObservableObject {
 
     func stop() {
         motionManager.stopDeviceMotionUpdates()
-    }
-
-    deinit {
-        MainActor.assumeIsolated {
-            motionManager.stopDeviceMotionUpdates()
-        }
     }
 }
 
