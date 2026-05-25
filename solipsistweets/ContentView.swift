@@ -228,7 +228,7 @@ struct ContentView: View {
     }
 
     private var frontRotationDegrees: Double {
-        switchDirection * 180 * Double(switchProgress)
+        connectedEdgeRotationDegrees(progress: switchProgress, direction: switchDirection)
     }
 
     private var backRotationDegrees: Double {
@@ -422,6 +422,13 @@ private struct TabWebSurface: View {
     }
 }
 
+private func connectedEdgeRotationDegrees(progress: CGFloat, direction: Double) -> Double {
+    let clampedProgress = min(max(Double(progress), 0), 1)
+    let projectedEdgePosition = 1 - (2 * clampedProgress)
+    let radians = acos(projectedEdgePosition)
+    return direction * radians * 180 / .pi
+}
+
 private struct SideSwitcherControl: View {
     private let diameter: CGFloat = 86
     private let glyphSize: CGFloat = 24
@@ -576,7 +583,7 @@ private struct SideSwitcherControl: View {
     }
 
     private var iconFrontRotationDegrees: Double {
-        switchDirection * 180 * Double(progress)
+        connectedEdgeRotationDegrees(progress: progress, direction: switchDirection)
     }
 
     private var iconBackRotationDegrees: Double {
