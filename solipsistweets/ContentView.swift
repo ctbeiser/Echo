@@ -179,6 +179,25 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    if canRemoveAccounts {
+                        Button {
+                            dismissShareBanner()
+                            presentRemoveTabChoices()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.crop.circle.badge.minus")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Remove Account")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(.primary)
+                            .background(.regularMaterial, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.top, 8)
                 .padding(.horizontal, 12)
@@ -195,6 +214,10 @@ struct ContentView: View {
 
     private var removeTabChoices: [SocialTab] {
         [.bluesky, .x].filter { removableTabs.contains($0) }
+    }
+
+    private var canRemoveAccounts: Bool {
+        removeTabChoices.count > 1
     }
 
     private var shouldShowScreenTimeBadge: Bool {
@@ -472,13 +495,8 @@ private struct SideSwitcherControl: View {
         }
         .frame(width: diameter, height: diameter)
         .contentShape(Circle())
-        .liquidGlass(in: Circle())
-        .overlay {
-            Circle()
-                .stroke(.white.opacity(0.28), lineWidth: 0.5)
-        }
+        .interactiveLiquidGlass(in: Circle())
         .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 6)
-        .scaleEffect(isPressed ? 0.93 : 1)
     }
 
     private var iconFrontRotationDegrees: Double {
@@ -499,20 +517,24 @@ private struct SideSwitcherControl: View {
         return startOffset + ((endOffset - startOffset) * min(max(progress, 0), 1))
     }
 
+    private var clampedProgress: CGFloat {
+        min(max(progress, 0), 1)
+    }
+
     private func xPosition(in width: CGFloat) -> CGFloat {
         let leading: CGFloat = 0
         let trailing = width
         let start = activeTab == .x ? trailing : leading
         let end = activeTab == .x ? leading : trailing
-        return start + ((end - start) * min(max(progress, 0), 1))
+        return start + ((end - start) * clampedProgress)
     }
 }
 
 private extension View {
     @ViewBuilder
-    func liquidGlass<S: Shape>(in shape: S) -> some View {
+    func interactiveLiquidGlass<S: Shape>(in shape: S) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(.regular, in: shape)
+            self.glassEffect(.regular.interactive(), in: shape)
         } else {
             self.background(.regularMaterial, in: shape)
         }
