@@ -11,6 +11,9 @@ import WebKit
 
 struct ContentView: View {
     private let screenTimeBadgeThreshold: TimeInterval = 20 * 60
+    private let screenTimeBadgeGrowthStart: TimeInterval = 60 * 60
+    private let screenTimeBadgeGrowthEnd: TimeInterval = 2 * 60 * 60
+    private let screenTimeBadgeMaxScale: CGFloat = 2
     private static let testFlightURL = URL.required(string: "https://testflight.apple.com/join/N3DtJcgD")
     @Binding var requestedURL: URL
     @StateObject private var shakeDetector = ShakeDetector()
@@ -131,6 +134,8 @@ struct ContentView: View {
                     .overlay(
                         Capsule().stroke(badgeForegroundColor.opacity(0.08), lineWidth: 0.5)
                     )
+                    .scaleEffect(screenTimeBadgeScale, anchor: .bottom)
+                    .animation(.linear(duration: 1.0), value: screenTimeBadgeScale)
                     .padding(.bottom, 16)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: [.bottom])
@@ -225,6 +230,15 @@ struct ContentView: View {
 
     private var shouldShowScreenTimeBadge: Bool {
         screenTimeTracker.secondsToday >= screenTimeBadgeThreshold
+    }
+
+    private var screenTimeBadgeScale: CGFloat {
+        let elapsedSeconds = screenTimeTracker.secondsToday
+        guard elapsedSeconds > screenTimeBadgeGrowthStart else { return 1 }
+
+        let growthWindow = screenTimeBadgeGrowthEnd - screenTimeBadgeGrowthStart
+        let progress = min(max((elapsedSeconds - screenTimeBadgeGrowthStart) / growthWindow, 0), 1)
+        return 1 + (CGFloat(progress) * (screenTimeBadgeMaxScale - 1))
     }
 
     private var badgeForegroundColor: Color {
