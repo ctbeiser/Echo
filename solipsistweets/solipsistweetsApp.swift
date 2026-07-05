@@ -5,6 +5,7 @@
 
 import Combine
 import SwiftUI
+import UIKit
 
 @MainActor
 final class SocialAccountStore: ObservableObject {
@@ -84,6 +85,12 @@ final class SocialAccountStore: ObservableObject {
         }
     }
 
+    func select(_ tab: SocialTab) {
+        guard configuredTabs.contains(tab) else { return }
+        activeTab = tab
+        userDefaults.set(tab.rawValue, forKey: Self.activeTabKey)
+    }
+
     func remove(_ tab: SocialTab) {
         guard configuredTabs.count > 1 else { return }
         configuredTabs.removeAll { $0 == tab }
@@ -140,11 +147,17 @@ struct SolipsistweetsApp: App {
                 .environmentObject(screenTimeTracker)
                 .environmentObject(accountStore)
                 .onOpenURL { url in
-                    guard url.scheme?.lowercased() == "echodotapp" else { return }
-                    if let mapped = SocialTab.x.mapEchoDotAppToHTTPS(url) {
-                        accountStore.add(.x)
-                        accountStore.activeTab = .x
+                    switch IncomingURLRouter.route(url) {
+                    case .openInApp(let mapped, let tab):
+                        accountStore.add(tab)
+                        accountStore.select(tab)
                         requestedURL = mapped
+
+                    case .openExternal(let externalURL):
+                        UIApplication.shared.open(externalURL, options: [:], completionHandler: nil)
+
+                    case .ignore:
+                        break
                     }
                 }
                 .onAppear {
@@ -176,7 +189,7 @@ private struct SocialWebContainer: View {
                     accountStore.completeInitialChoice(tabs)
                     requestedURL = accountStore.activeTab.startURL
                 }
-            } else if !accountStore.activeTab.canonicalHosts.contains(requestedURL.host?.lowercased() ?? "") {
+            } else if !accountStore.activeTab.hasCanonicalHost(for: requestedURL) {
                 Color.clear
                     .onAppear {
                         requestedURL = accountStore.activeTab.startURL
@@ -202,6 +215,11 @@ private struct SocialWebContainer: View {
                     onSetupTab: { tab in
                         accountStore.add(tab)
                         requestedURL = accountStore.activeTab.startURL
+                    },
+                    onOpenURLInTab: { url, tab in
+                        accountStore.add(tab)
+                        accountStore.select(tab)
+                        requestedURL = url
                     }
                 )
                 .alert("Bluesky Support Is Here", isPresented: $accountStore.isPresentingUpgradePrompt) {
@@ -218,6 +236,7 @@ private struct SocialWebContainer: View {
             }
         }
         .onChange(of: accountStore.activeTab) { _, _ in
+            guard !accountStore.activeTab.hasCanonicalHost(for: requestedURL) else { return }
             requestedURL = accountStore.activeTab.startURL
         }
     }

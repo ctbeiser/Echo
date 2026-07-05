@@ -6,11 +6,47 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1A00000C2E90000000000001 /* EchoShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000012E90000000000001 /* EchoShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1A00000D2E90000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 160493FE2E6507430073407B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A0000072E90000000000001;
+			remoteInfo = EchoShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1A00000B2E90000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1A00000C2E90000000000001 /* EchoShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		1A0000012E90000000000001 /* EchoShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EchoShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		160494062E6507430073407B /* solipsistweets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = solipsistweets.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1A0000032E90000000000001 /* Exceptions for "EchoShareExtension" folder in "EchoShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1A0000072E90000000000001 /* EchoShareExtension */;
+		};
 		165A12742E7D222B0021ED67 /* Exceptions for "solipsistweets" folder in "solipsistweets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -21,6 +57,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		1A0000022E90000000000001 /* EchoShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1A0000032E90000000000001 /* Exceptions for "EchoShareExtension" folder in "EchoShareExtension" target */,
+			);
+			path = EchoShareExtension;
+			sourceTree = "<group>";
+		};
 		160494082E6507430073407B /* solipsistweets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -32,6 +76,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1A0000052E90000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		160494032E6507430073407B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -46,6 +97,7 @@
 			isa = PBXGroup;
 			children = (
 				160494082E6507430073407B /* solipsistweets */,
+				1A0000022E90000000000001 /* EchoShareExtension */,
 				160494072E6507430073407B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				160494062E6507430073407B /* solipsistweets.app */,
+				1A0000012E90000000000001 /* EchoShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,6 +114,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1A0000072E90000000000001 /* EchoShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A0000082E90000000000001 /* Build configuration list for PBXNativeTarget "EchoShareExtension" */;
+			buildPhases = (
+				1A00000F2E90000000000001 /* SwiftLint */,
+				1A0000042E90000000000001 /* Sources */,
+				1A0000052E90000000000001 /* Frameworks */,
+				1A0000062E90000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1A0000022E90000000000001 /* EchoShareExtension */,
+			);
+			name = EchoShareExtension;
+			packageProductDependencies = (
+			);
+			productName = EchoShareExtension;
+			productReference = 1A0000012E90000000000001 /* EchoShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		160494052E6507430073407B /* solipsistweets */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 160494112E6507440073407B /* Build configuration list for PBXNativeTarget "solipsistweets" */;
@@ -69,10 +145,12 @@
 				160494022E6507430073407B /* Sources */,
 				160494032E6507430073407B /* Frameworks */,
 				160494042E6507430073407B /* Resources */,
+				1A00000B2E90000000000001 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1A00000E2E90000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				160494082E6507430073407B /* solipsistweets */,
@@ -94,6 +172,9 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					1A0000072E90000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					160494052E6507430073407B = {
 						CreatedOnToolsVersion = 26.0;
 					};
@@ -114,11 +195,19 @@
 			projectRoot = "";
 			targets = (
 				160494052E6507430073407B /* solipsistweets */,
+				1A0000072E90000000000001 /* EchoShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1A0000062E90000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		160494042E6507430073407B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -129,6 +218,29 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		1A00000F2E90000000000001 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.swiftlint.yml",
+				"$(SRCROOT)/.swiftlint-build.yml",
+				"$(SRCROOT)/scripts/swiftlint.sh",
+				"$(SRCROOT)/EchoShareExtension",
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/SwiftLint-EchoShareExtension.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/EchoShareExtension\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+		};
 		160494142E6507440073407B /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -155,6 +267,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1A0000042E90000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		160494022E6507430073407B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -164,7 +283,95 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		1A00000E2E90000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1A0000072E90000000000001 /* EchoShareExtension */;
+			targetProxy = 1A00000D2E90000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		1A0000092E90000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = NFZL2NT288;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EchoShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Open in Echo";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.08;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.OpenInEcho;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A00000A2E90000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = NFZL2NT288;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EchoShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Open in Echo";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.08;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.OpenInEcho;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		1604940F2E6507440073407B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -305,9 +512,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = solipsistweets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
-				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access for web pages when you choose to capture photos or video.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access for web pages when you choose to share your location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access for web pages when you choose to record audio or video.";
@@ -363,9 +570,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = solipsistweets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
-				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
-				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp\n    );\n}";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphoneos*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
+				"INFOPLIST_KEY_CFBundleURLTypes[sdk=iphonesimulator*]" = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = echodotapp;\n    CFBundleURLSchemes =     (\n        echodotapp,\n        e\n    );\n}";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access for web pages when you choose to capture photos or video.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location access for web pages when you choose to share your location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow microphone access for web pages when you choose to record audio or video.";
@@ -406,6 +613,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1A0000082E90000000000001 /* Build configuration list for PBXNativeTarget "EchoShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0000092E90000000000001 /* Debug */,
+				1A00000A2E90000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		160494012E6507430073407B /* Build configuration list for PBXProject "solipsistweets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

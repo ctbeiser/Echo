@@ -67,9 +67,14 @@ enum SocialTab: String, CaseIterable, Identifiable {
 
     var canonicalHosts: Set<String> {
         switch self {
-        case .x: return ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com"]
+        case .x: return ["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com"]
         case .bluesky: return ["cope.works", "www.cope.works"]
         }
+    }
+
+    func hasCanonicalHost(for url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return canonicalHosts.contains(host)
     }
 
     var startURL: URL {

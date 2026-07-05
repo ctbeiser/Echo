@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var isSwitcherPressed = false
     @State private var switchProgress: CGFloat = 0
     @State private var switchCompletionTask: Task<Void, Never>?
+    @State private var pendingRoutedTab: SocialTab?
     @State private var requestedURLsByTab: [SocialTab: URL] = [:]
     @EnvironmentObject private var screenTimeTracker: OnScreenTimeTracker
     @Environment(\.colorScheme) private var colorScheme
@@ -31,6 +32,7 @@ struct ContentView: View {
     var onSwitchTab: (() -> Void)?
     var onRemoveTab: ((SocialTab) -> Void)?
     var onSetupTab: ((SocialTab) -> Void)?
+    var onOpenURLInTab: ((URL, SocialTab) -> Void)?
 
     init(
         requestedURL: Binding<URL>,
@@ -40,7 +42,8 @@ struct ContentView: View {
         setupTabs: [SocialTab] = [],
         onSwitchTab: (() -> Void)? = nil,
         onRemoveTab: ((SocialTab) -> Void)? = nil,
-        onSetupTab: ((SocialTab) -> Void)? = nil
+        onSetupTab: ((SocialTab) -> Void)? = nil,
+        onOpenURLInTab: ((URL, SocialTab) -> Void)? = nil
     ) {
         _requestedURL = requestedURL
         self.activeTab = activeTab
@@ -50,13 +53,14 @@ struct ContentView: View {
         self.onSwitchTab = onSwitchTab
         self.onRemoveTab = onRemoveTab
         self.onSetupTab = onSetupTab
+        self.onOpenURLInTab = onOpenURLInTab
     }
 
     var body: some View {
         ZStack {
             flipDeck
 
-            if let nextTab {
+            if let nextTab, pendingRoutedTab == nil {
                 SideSwitcherControl(
                     tab: nextTab,
                     activeTab: activeTab,
@@ -101,7 +105,7 @@ struct ContentView: View {
     private var flipDeck: some View {
         ZStack {
             ForEach(visibleTabs) { tab in
-                TabWebSurface(url: urlBinding(for: tab), tab: tab)
+                TabWebSurface(url: urlBinding(for: tab), tab: tab, onOpenURLInTab: openURLInTab)
                     .opacity(opacity(for: tab))
                     .rotation3DEffect(
                         .degrees(rotationDegrees(for: tab)),
@@ -203,8 +207,12 @@ struct ContentView: View {
 
     private var visibleTabs: [SocialTab] {
         SocialTab.allCases.filter { tab in
-            tab == activeTab || tab == nextTab
+            tab == activeTab || tab == flipTargetTab
         }
+    }
+
+    private var flipTargetTab: SocialTab? {
+        pendingRoutedTab ?? nextTab
     }
 
     private var removeTabChoices: [SocialTab] {
@@ -246,6 +254,9 @@ struct ContentView: View {
         if let nextTab, requestedURLsByTab[nextTab] == nil {
             requestedURLsByTab[nextTab] = nextTab.startURL
         }
+        if let pendingRoutedTab, requestedURLsByTab[pendingRoutedTab] == nil {
+            requestedURLsByTab[pendingRoutedTab] = pendingRoutedTab.startURL
+        }
     }
 
     private func urlBinding(for tab: SocialTab) -> Binding<URL> {
@@ -262,11 +273,23 @@ struct ContentView: View {
         )
     }
 
+    private func openURLInTab(_ url: URL, tab: SocialTab) {
+        requestedURLsByTab[tab] = url
+        guard tab != activeTab else {
+            requestedURL = url
+            return
+        }
+
+        completeSwitch(to: tab) {
+            onOpenURLInTab?(url, tab)
+        }
+    }
+
     private func opacity(for tab: SocialTab) -> Double {
         if tab == activeTab {
             return switchProgress <= 0.5 ? 1 : 0
         }
-        if tab == nextTab {
+        if tab == flipTargetTab {
             return switchProgress > 0.5 ? 1 : 0
         }
         return 0
@@ -276,7 +299,7 @@ struct ContentView: View {
         if tab == activeTab {
             return frontRotationDegrees
         }
-        if tab == nextTab {
+        if tab == flipTargetTab {
             return backRotationDegrees
         }
         return 0
@@ -286,7 +309,7 @@ struct ContentView: View {
         if tab == activeTab {
             return switchProgress <= 0.5 ? 1 : 0
         }
-        if tab == nextTab {
+        if tab == flipTargetTab {
             return switchProgress > 0.5 ? 1 : 0
         }
         return -1
@@ -330,7 +353,9 @@ struct ContentView: View {
     private func beginSwitcherTap() {
         guard nextTab != nil else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        completeSwitch()
+        completeSwitch {
+            onSwitchTab?()
+        }
     }
 
     private func updateSwitchDrag(_ translationWidth: CGFloat, screenWidth: CGFloat) {
@@ -349,7 +374,9 @@ struct ContentView: View {
         let predictedProgress = switchProgress(for: predictedTranslationWidth, screenWidth: screenWidth)
         if max(progress, predictedProgress) >= 0.48 {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            completeSwitch()
+            completeSwitch {
+                onSwitchTab?()
+            }
         } else {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
                 switchProgress = 0
@@ -364,8 +391,9 @@ struct ContentView: View {
         return min(max(signedTranslation / travelDistance, 0), 1)
     }
 
-    private func completeSwitch() {
+    private func completeSwitch(to routedTab: SocialTab? = nil, completion: @escaping @MainActor () -> Void) {
         switchCompletionTask?.cancel()
+        pendingRoutedTab = routedTab
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             switchProgress = 1
             isSwitcherPressed = false
@@ -377,8 +405,9 @@ struct ContentView: View {
             transaction.disablesAnimations = true
             transaction.animation = nil
             withTransaction(transaction) {
-                onSwitchTab?()
+                completion()
                 switchProgress = 0
+                pendingRoutedTab = nil
             }
             switchCompletionTask = nil
         }
@@ -396,13 +425,20 @@ struct ContentView: View {
 private struct TabWebSurface: View {
     @Binding var url: URL
     let tab: SocialTab
+    let onOpenURLInTab: (URL, SocialTab) -> Void
     @State private var isLoading = true
     @State private var lastErrorDescription: String?
 
     var body: some View {
         ZStack {
-            WebView(url: url, isLoading: $isLoading, lastErrorDescription: $lastErrorDescription, activeTab: tab)
-                .ignoresSafeArea(edges: [.bottom])
+            WebView(
+                url: url,
+                isLoading: $isLoading,
+                lastErrorDescription: $lastErrorDescription,
+                activeTab: tab,
+                onOpenURLInTab: onOpenURLInTab
+            )
+            .ignoresSafeArea(edges: [.bottom])
 
             if isLoading {
                 ProgressView()
@@ -881,6 +917,7 @@ struct WebView: UIViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var lastErrorDescription: String?
     let activeTab: SocialTab
+    let onOpenURLInTab: (URL, SocialTab) -> Void
 
     typealias UIViewType = WKWebView
 
@@ -1001,9 +1038,20 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
             return
         }
 
-        if scheme == "echodotapp" {
-            if let mapped = activeTab.mapEchoDotAppToHTTPS(url) {
-                webView.load(URLRequest(url: mapped))
+        if EchoURLScheme.appSchemes.contains(scheme) {
+            switch IncomingURLRouter.route(url) {
+            case .openInApp(let mapped, let tab):
+                if tab == activeTab {
+                    webView.load(URLRequest(url: mapped))
+                } else {
+                    parent.onOpenURLInTab(mapped, tab)
+                }
+
+            case .openExternal(let externalURL):
+                Self.openExternal(externalURL)
+
+            case .ignore:
+                break
             }
             decisionHandler(.cancel)
             return
@@ -1023,7 +1071,7 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         }
 
         if Self.webSchemes.contains(scheme), !isInternalHost(url) {
-            Coordinator.openExternal(url)
+            routeExternalNavigation(url)
         } else {
             webView.load(navigationAction.request)
         }
@@ -1076,14 +1124,26 @@ private extension Coordinator {
         if isInternalHost(url) {
             decisionHandler(.allow)
         } else {
-            Coordinator.openExternal(url)
+            routeExternalNavigation(url)
             decisionHandler(.cancel)
         }
     }
 
+    func routeExternalNavigation(_ url: URL) {
+        switch IncomingURLRouter.route(url) {
+        case .openInApp(let mapped, let tab):
+            parent.onOpenURLInTab(mapped, tab)
+
+        case .openExternal(let externalURL):
+            Coordinator.openExternal(externalURL)
+
+        case .ignore:
+            Coordinator.openExternal(url)
+        }
+    }
+
     func isInternalHost(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else { return false }
-        return activeTab.canonicalHosts.contains(host)
+        activeTab.hasCanonicalHost(for: url)
     }
 
     func shouldRedirectHomeTimelineToNotifications(_ url: URL) -> Bool {
@@ -1122,109 +1182,15 @@ extension Coordinator {
     }
 
     static func mapSafariBounceURL(_ url: URL) -> URL? {
-        guard let incomingScheme = url.scheme?.lowercased() else { return nil }
-        let mappedScheme: String
-        switch incomingScheme {
-        case "x-safari-http":
-            mappedScheme = "http"
-
-        case "x-safari-https":
-            mappedScheme = "https"
-
-        default:
-            return nil
-        }
-
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let host = components.host {
-            var mapped = URLComponents()
-            mapped.scheme = mappedScheme
-            mapped.host = host
-            mapped.path = components.path
-            mapped.queryItems = components.queryItems
-            mapped.fragment = components.fragment
-            return mapped.url
-        }
-
-        let prefix = "\(incomingScheme):"
-        guard url.absoluteString.lowercased().hasPrefix(prefix) else { return nil }
-        let remainder = String(url.absoluteString.dropFirst(prefix.count))
-        if let nestedURL = URL(string: remainder),
-           let nestedScheme = nestedURL.scheme?.lowercased(),
-           nestedScheme == "http" || nestedScheme == "https" {
-            if nestedScheme == mappedScheme {
-                return nestedURL
-            }
-            var nestedComponents = URLComponents(url: nestedURL, resolvingAgainstBaseURL: false)
-            nestedComponents?.scheme = mappedScheme
-            return nestedComponents?.url
-        }
-        let normalized = remainder.hasPrefix("//") ? "\(mappedScheme):\(remainder)" : "\(mappedScheme)://\(remainder)"
-        return URL(string: normalized)
+        IncomingURLRouter.mapSafariBounceURL(url)
     }
 
     static func mapTwitterDeepLinkToHTTPS(url: URL) -> URL? {
-        let host = url.host?.lowercased() ?? ""
-        let path = url.path.lowercased()
-        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
-        let valueFor = { (name: String) -> String? in
-            queryItems?.first(where: { $0.name.lowercased() == name })?.value
-        }
-
-        if host == "user", let screenName = valueFor("screen_name"), !screenName.isEmpty {
-            return URL(string: "https://x.com/\(screenName)")
-        }
-        if host == "status" || host == "tweet", let id = valueFor("id"), !id.isEmpty {
-            return URL(string: "https://x.com/i/web/status/\(id)")
-        }
-        if host == "messages" || path == "/messages" {
-            return URL(string: "https://x.com/messages")
-        }
-        if host == "timeline" || path == "/timeline" || path == "/home" {
-            return URL(string: "https://x.com/home")
-        }
-        if host == "search", let q = valueFor("query"), let encoded = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            return URL(string: "https://x.com/search?q=\(encoded)")
-        }
-        if host == "intent" || path.starts(with: "/intent/") {
-            var comps = URLComponents()
-            comps.scheme = "https"
-            comps.host = "x.com"
-            comps.path = path.isEmpty ? "/intent/tweet" : path
-            comps.queryItems = queryItems
-            return comps.url
-        }
-        return nil
+        IncomingURLRouter.mapTwitterDeepLinkToHTTPS(url: url)
     }
 
     static func mapEchoDotAppToHTTPS(url: URL) -> URL? {
-        guard let incoming = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return URL(string: "https://x.com")
-        }
-        let lowerHost = incoming.host?.lowercased()
-        let isXHost = lowerHost == "x.com" || lowerHost == "www.x.com" || lowerHost == "mobile.x.com"
-
-        let pathAfterX: String
-        if isXHost || lowerHost == nil {
-            pathAfterX = incoming.path
-        } else {
-            let hostSegment = incoming.host ?? ""
-            if incoming.path.hasPrefix("/") {
-                pathAfterX = "/" + hostSegment + incoming.path
-            } else if incoming.path.isEmpty {
-                pathAfterX = "/" + hostSegment
-            } else {
-                pathAfterX = "/" + hostSegment + "/" + incoming.path
-            }
-        }
-
-        var comps = URLComponents()
-        comps.scheme = "https"
-        comps.host = "x.com"
-        comps.path = pathAfterX
-        comps.queryItems = incoming.queryItems
-        comps.fragment = incoming.fragment
-        return comps.url ?? URL(string: "https://x.com")
+        IncomingURLRouter.mapEchoDotAppToHTTPS(url: url)
     }
 }
 
