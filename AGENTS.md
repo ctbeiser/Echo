@@ -10,7 +10,7 @@ Use Verify Full (`scripts/verify-full.sh`) when a change touches project setting
 
 Use `scripts/build-simulator.sh` for a general compiler or smoke-check build and `scripts/build-device.sh` only when a signed iphoneos product is intentionally required. Both use repo-local `DerivedData/`; the simulator build is always unsigned and cannot inherit a physical-device destination. Override their destinations with `SIMULATOR_DESTINATION=...` or `DEVICE_DESTINATION=...`, respectively.
 
-Use `scripts/run-device.sh` to build the `solipsistweets` scheme, verify its signature, install it on a paired iPhone over Wi-Fi, and launch it. If more than one wireless iPhone is available, set `DEVICE_ID` to a listed device name, identifier, or UDID. The shared Conductor Run action invokes this script locally and is nonconcurrent because the physical device is shared.
+Use `scripts/run-device.sh` to build the `solipsistweets` scheme, verify its signature, install it on a paired iPhone over Wi-Fi, and launch it. If more than one wireless iPhone is available, set `DEVICE_ID` to a listed device name, identifier, or UDID. The shared Conductor Run action invokes this script locally and is nonconcurrent because the physical device is shared. Runs keep output concise by default while native `xcodebuild` warnings and errors and `devicectl` errors remain visible. Set `RUN_VERBOSE=1` to restore full `xcodebuild` and `devicectl` output.
 
 For production-scheme validation such as app packaging, project wiring, signing-sensitive behavior, platform support, or release-only settings, run the affected Xcode scheme directly with the needed destination/configuration. There is no separate watch/full verification script in this repo.
 

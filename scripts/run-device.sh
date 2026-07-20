@@ -5,6 +5,12 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 configuration="${CONFIGURATION:-Debug}"
 derived_data_path="${DERIVED_DATA_PATH:-$repo_root/DerivedData}"
+build_arguments=(build)
+devicectl_arguments=()
+if [[ "${RUN_VERBOSE:-0}" != "1" ]]; then
+  build_arguments=(-quiet build)
+  devicectl_arguments=(--quiet)
+fi
 
 temporary_directory="$(mktemp -d)"
 devices_json="$temporary_directory/devices.json"
@@ -30,12 +36,18 @@ print_devices() {
 }
 
 echo "Finding paired iPhones available over Wi-Fi..."
-xcrun devicectl list devices --json-output "$devices_json" >/dev/null
+xcrun devicectl ${devicectl_arguments[@]+"${devicectl_arguments[@]}"} \
+  list devices --json-output "$devices_json" >/dev/null
 
 device_identifiers=()
 device_udids=()
 device_names=()
 device_count="$(plist_value result.devices "$devices_json")"
+
+if [[ ! "$device_count" =~ ^[0-9]+$ ]]; then
+  echo "error: Could not read the paired-device list from devicectl." >&2
+  exit 1
+fi
 
 for ((index = 0; index < device_count; index++)); do
   prefix="result.devices.$index"
@@ -104,7 +116,7 @@ destination="platform=iOS,id=$device_udid"
 echo "Building a signed $configuration build of solipsistweets for $device_name..."
 SCHEME=solipsistweets \
   DEVICE_DESTINATION="$destination" \
-  "$repo_root/scripts/build-device.sh"
+  "$repo_root/scripts/build-device.sh" "${build_arguments[@]}"
 
 full_product_name="${APP_NAME:-solipsistweets.app}"
 app_path="${APP_PATH:-$derived_data_path/Build/Products/$configuration-iphoneos/$full_product_name}"
@@ -124,10 +136,12 @@ echo "Verifying the app signature..."
 /usr/bin/codesign --verify --deep --strict "$app_path"
 
 echo "Installing $full_product_name on $device_name over Wi-Fi..."
-xcrun devicectl device install app --device "$device_identifier" "$app_path"
+xcrun devicectl ${devicectl_arguments[@]+"${devicectl_arguments[@]}"} \
+  device install app --device "$device_identifier" "$app_path"
 
 echo "Launching $bundle_identifier on $device_name..."
-xcrun devicectl device process launch \
+xcrun devicectl ${devicectl_arguments[@]+"${devicectl_arguments[@]}"} \
+  device process launch \
   --device "$device_identifier" \
   --terminate-existing \
   "$bundle_identifier"
