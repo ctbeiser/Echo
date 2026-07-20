@@ -8,6 +8,8 @@ Use Verify Fast (`scripts/verify-fast.sh`) for changes isolated to the app targe
 
 Use Verify Full (`scripts/verify-full.sh`) when a change touches project settings, build scripts, or anything that should use the full verification path. It builds the `Verify Full` scheme. This repository has one app scheme, `solipsistweets`, and no watch target.
 
+GitHub Actions runs `.github/workflows/ios-ci.yml` for pull requests, pushes to `main`, and manual dispatches. CI checks SwiftLint formatting and strict lint for both the app and share extension, then runs `scripts/verify-full.sh` as an unsigned simulator build. Signed device builds and installs remain local-only.
+
 Use `scripts/build-simulator.sh` for a general compiler or smoke-check build and `scripts/build-device.sh` only when a signed iphoneos product is intentionally required. Both use repo-local `DerivedData/`; the simulator build is always unsigned and cannot inherit a physical-device destination. Override their destinations with `SIMULATOR_DESTINATION=...` or `DEVICE_DESTINATION=...`, respectively.
 
 Use `scripts/run-device.sh` to build the `solipsistweets` scheme, verify its signature, install it on a paired iPhone over Wi-Fi, and launch it. If more than one wireless iPhone is available, set `DEVICE_ID` to a listed device name, identifier, or UDID. The shared Conductor Run action invokes this script locally and is nonconcurrent because the physical device is shared. Runs keep output concise by default while native `xcodebuild` warnings and errors and `devicectl` errors remain visible. Set `RUN_VERBOSE=1` to restore full `xcodebuild` and `devicectl` output.
@@ -52,7 +54,7 @@ For a new worktree, `scripts/seed-derived-data.sh` can copy a warm sibling `Deri
 
 SwiftLint is configured with focused safety/correctness rules in `.swiftlint.yml` and runs in strict mode. Broad size/name/shape rules and current style-only noise are disabled so formatting preferences do not drown out safety checks or block routine builds.
 
-Run build-time lint with `scripts/swiftlint.sh build`; Xcode target phases run the same command during verification builds. Missing SwiftLint is a local warning but a CI error. Run the base config directly with `scripts/swiftlint.sh lint`. Run autofix-only style cleanup with `scripts/swiftlint.sh fix`.
+Run build-time lint with `scripts/swiftlint.sh build`; Xcode target phases run the same command during verification builds. Missing SwiftLint is a local warning but a CI error. Run the base config directly with `scripts/swiftlint.sh lint`. Run autofix-only style cleanup with `scripts/swiftlint.sh fix`. With no paths supplied, both commands cover `solipsistweets` and `EchoShareExtension`.
 
 Install the optional pre-commit hook with `scripts/install-git-hooks.sh`; it sets `core.hooksPath` to `scripts/git-hooks`, runs the separate `.swiftlint-autofix.yml` path with SwiftLint `--fix --format` on staged Swift files, re-stages fixes, and aborts if a staged Swift file also has unstaged edits. Keep broad style gates out of strict lint unless existing code is baselined or fixed separately.
 

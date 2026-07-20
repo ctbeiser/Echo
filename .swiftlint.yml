@@ -1,10 +1,6 @@
 reporter: xcode
 strict: true
 
-included:
-  - solipsistweets
-  - orion
-
 excluded:
   - DerivedData
   - .context
