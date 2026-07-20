@@ -1,0 +1,81 @@
+name: iOS CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: SwiftLint
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: |
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            brew install swiftlint
+          fi
+
+          swiftlint version
+
+      - name: Check formatting
+        run: |
+          scripts/swiftlint.sh fix
+
+          if ! git diff --quiet -- solipsistweets EchoShareExtension; then
+            echo "::error::SwiftLint autofix/format changed files. Run scripts/swiftlint.sh fix and commit the result."
+            git diff -- solipsistweets EchoShareExtension
+            exit 1
+          fi
+
+      - name: Run SwiftLint
+        run: scripts/swiftlint.sh lint
+
+  build:
+    name: Build
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+
+          if [ -d /Applications/Xcode_26.4.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.4.app
+          elif [ -d /Applications/Xcode_26.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.app
+          else
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Install SwiftLint
+        run: |
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            brew install swiftlint
+          fi
+
+          swiftlint version
+
+      - name: Build
+        run: scripts/verify-full.sh
