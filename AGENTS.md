@@ -8,13 +8,17 @@ Use Verify Fast (`scripts/verify-fast.sh`) for changes isolated to the app targe
 
 Use Verify Full (`scripts/verify-full.sh`) when a change touches project settings, build scripts, or anything that should use the full verification path. It builds the `Verify Full` scheme. This repository has one app scheme, `solipsistweets`, and no watch target.
 
+Use `scripts/build-simulator.sh` for a general compiler or smoke-check build and `scripts/build-device.sh` only when a signed iphoneos product is intentionally required. Both use repo-local `DerivedData/`; the simulator build is always unsigned and cannot inherit a physical-device destination. Override their destinations with `SIMULATOR_DESTINATION=...` or `DEVICE_DESTINATION=...`, respectively.
+
+Use `scripts/run-device.sh` to build the `solipsistweets` scheme, verify its signature, install it on a paired iPhone over Wi-Fi, and launch it. If more than one wireless iPhone is available, set `DEVICE_ID` to a listed device name, identifier, or UDID. The shared Conductor Run action invokes this script locally and is nonconcurrent because the physical device is shared.
+
 For production-scheme validation such as app packaging, project wiring, signing-sensitive behavior, platform support, or release-only settings, run the affected Xcode scheme directly with the needed destination/configuration. There is no separate watch/full verification script in this repo.
 
 All verification scripts use repo-local `DerivedData/`, pass `-disableAutomaticPackageResolution`, disable the compiler index store with `COMPILER_INDEX_STORE_ENABLE=NO`, disable debug dylib generation with `ENABLE_DEBUG_DYLIB=NO`, disable testability with `ENABLE_TESTABILITY=NO`, disable previews/string-symbol/localized-string generation, and use simulator-only no-signing settings `CODE_SIGNING_ALLOWED=NO` plus `CODE_SIGN_STYLE=Manual`. This repo currently has no SwiftPM package dependencies; do not add package-resolution/cache infrastructure unless dependencies are introduced.
 
-For simulator builds, the app-only and fast verification scripts constrain `ARCHS` to the host architecture by default to avoid building unused simulator slices. Override with `BUILD_ARCHS=...` only when broader simulator architecture coverage is intentional.
+For simulator builds, the shared build scripts constrain `ARCHS` to the host architecture and set `ONLY_ACTIVE_ARCH=YES` by default to avoid building unused simulator slices. Override with `BUILD_ARCHS=...` or `ONLY_ACTIVE_ARCH=...` only when broader simulator architecture coverage is intentional.
 
-For build timing, use `scripts/time-build.sh`. It keeps timing build products under `.context/build-timing/` and enables Xcode's build timing summary. By default it times a clean `build` of the `Verify Full` scheme; set `BUILD_ACTION=build-for-testing` or `CLEAN=0` when needed.
+For build timing, use `scripts/time-build.sh`. It reuses repo-local `DerivedData/` and enables Xcode's build timing summary. By default it times an incremental `build` of the `Verify Full` scheme; set `BUILD_ACTION=build-for-testing` or `CLEAN=1` when needed.
 
 ## Tests
 
@@ -40,7 +44,7 @@ Keep `ENABLE_USER_SCRIPT_SANDBOXING = NO`; project build phases may need access 
 
 ## DerivedData
 
-Keep DerivedData local to the worktree at `DerivedData/`. It is ignored by Git.
+Keep DerivedData local to the worktree at `DerivedData/`. It is ignored by Git, and all build, verification, timing, and device-run scripts use that same directory by default so their caches can be reused.
 
 For a new worktree, `scripts/seed-derived-data.sh` can copy a warm sibling `DerivedData/` using APFS clone-copy semantics when available, then removes path-sensitive build state. Install the optional best-effort hooks with `scripts/install-git-hooks.sh`; the post-checkout hook seeds DerivedData if absent without blocking checkout on failure.
 
