@@ -1,6 +1,8 @@
 import Foundation
+
+#if os(iOS)
 import UIKit
-import WebKit
+#endif
 
 extension URL {
     static func required(string: String) -> URL {
@@ -11,6 +13,7 @@ extension URL {
     }
 }
 
+#if os(iOS)
 private enum SharedUserAgent {
     static var mobileSafariCurrentDevice: String {
         let osVersion = UIDevice.current.systemVersion
@@ -38,6 +41,8 @@ private enum SharedUserAgent {
     }
 }
 
+#endif
+
 enum SocialTab: String, CaseIterable, Identifiable {
     case x
     case bluesky
@@ -46,14 +51,14 @@ enum SocialTab: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .x: return "Twitter / X"
+        case .x: return "Twitter"
         case .bluesky: return "Bluesky"
         }
     }
 
     var setupTitle: String {
         switch self {
-        case .x: return "Set Up X"
+        case .x: return "Set Up Twitter"
         case .bluesky: return "Set Up Bluesky"
         }
     }
@@ -84,9 +89,11 @@ enum SocialTab: String, CaseIterable, Identifiable {
         }
     }
 
+    #if os(iOS)
     var userAgent: String {
         SharedUserAgent.mobileSafariCurrentDevice
     }
+    #endif
 
     var contentBlockerIdentifier: String {
         switch self {
@@ -104,14 +111,14 @@ enum SocialTab: String, CaseIterable, Identifiable {
 
     func mapDeepLinkToHTTPS(_ url: URL) -> URL? {
         switch self {
-        case .x: return Coordinator.mapTwitterDeepLinkToHTTPS(url: url)
+        case .x: return IncomingURLRouter.mapTwitterDeepLinkToHTTPS(url: url)
         case .bluesky: return nil
         }
     }
 
     func mapEchoDotAppToHTTPS(_ url: URL) -> URL? {
         switch self {
-        case .x: return Coordinator.mapEchoDotAppToHTTPS(url: url)
+        case .x: return IncomingURLRouter.mapEchoDotAppToHTTPS(url: url)
         case .bluesky: return nil
         }
     }

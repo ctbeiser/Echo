@@ -37,6 +37,7 @@
 /* Begin PBXFileReference section */
 		1A0000012E90000000000001 /* EchoShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EchoShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		160494062E6507430073407B /* solipsistweets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = solipsistweets.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B0000012E90000000000001 /* Echo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Echo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -53,6 +54,11 @@
 				Info.plist,
 			);
 			target = 160494052E6507430073407B /* solipsistweets */;
+		};
+		1B0000032E90000000000001 /* Exceptions for EchoMac */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, EchoMac.entitlements, );
+			target = 1B0000072E90000000000001 /* EchoMac */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -73,6 +79,17 @@
 			path = solipsistweets;
 			sourceTree = "<group>";
 		};
+		1B0000022E90000000000001 /* EchoMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (1B0000032E90000000000001 /* Exceptions for EchoMac */, );
+			path = EchoMac;
+			sourceTree = "<group>";
+		};
+		1B0000102E90000000000001 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +107,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1B0000052E90000000000001 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -97,6 +120,8 @@
 			isa = PBXGroup;
 			children = (
 				160494082E6507430073407B /* solipsistweets */,
+				1B0000022E90000000000001 /* EchoMac */,
+				1B0000102E90000000000001 /* Shared */,
 				1A0000022E90000000000001 /* EchoShareExtension */,
 				160494072E6507430073407B /* Products */,
 			);
@@ -106,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				160494062E6507430073407B /* solipsistweets.app */,
+				1B0000012E90000000000001 /* Echo.app */,
 				1A0000012E90000000000001 /* EchoShareExtension.appex */,
 			);
 			name = Products;
@@ -154,12 +180,34 @@
 			);
 			fileSystemSynchronizedGroups = (
 				160494082E6507430073407B /* solipsistweets */,
+				1B0000102E90000000000001 /* Shared */,
 			);
 			name = solipsistweets;
 			packageProductDependencies = (
 			);
 			productName = solipsistweets;
 			productReference = 160494062E6507430073407B /* solipsistweets.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1B0000072E90000000000001 /* EchoMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B0000082E90000000000001;
+			buildPhases = (
+				1B00000F2E90000000000001 /* SwiftLint */,
+				1B0000042E90000000000001 /* Sources */,
+				1B0000052E90000000000001 /* Frameworks */,
+				1B0000062E90000000000001 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (
+				1B0000022E90000000000001 /* EchoMac */,
+				1B0000102E90000000000001 /* Shared */,
+			);
+			name = EchoMac;
+			packageProductDependencies = ();
+			productName = Echo;
+			productReference = 1B0000012E90000000000001 /* Echo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -195,6 +243,7 @@
 			projectRoot = "";
 			targets = (
 				160494052E6507430073407B /* solipsistweets */,
+				1B0000072E90000000000001 /* EchoMac */,
 				1A0000072E90000000000001 /* EchoShareExtension */,
 			);
 		};
@@ -213,6 +262,12 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B0000062E90000000000001 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -253,6 +308,7 @@
 				"$(SRCROOT)/.swiftlint-build.yml",
 				"$(SRCROOT)/scripts/swiftlint.sh",
 				"$(SRCROOT)/solipsistweets",
+				"$(SRCROOT)/Shared",
 			);
 			name = SwiftLint;
 			outputFileListPaths = (
@@ -262,7 +318,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/solipsistweets\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/solipsistweets\" \"$SRCROOT/Shared\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
+		};
+		1B00000F2E90000000000001 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			inputFileListPaths = ();
+			inputPaths = (
+				"$(SRCROOT)/.swiftlint.yml",
+				"$(SRCROOT)/.swiftlint-build.yml",
+				"$(SRCROOT)/scripts/swiftlint.sh",
+				"$(SRCROOT)/EchoMac",
+				"$(SRCROOT)/Shared",
+			);
+			name = SwiftLint;
+			outputFileListPaths = ();
+			outputPaths = ("$(DERIVED_FILE_DIR)/SwiftLint-EchoMac.stamp", );
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\"$SRCROOT/scripts/swiftlint.sh\" build \"$SRCROOT/EchoMac\" \"$SRCROOT/Shared\"\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -279,6 +354,12 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B0000042E90000000000001 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -610,6 +691,89 @@
 			};
 			name = Release;
 		};
+		1B0000092E90000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EchoMac/EchoMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EchoMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.08;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.mac;
+				PRODUCT_NAME = Echo;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		1B00000A2E90000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EchoMac/EchoMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EchoMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.08;
+				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
+				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.mac;
+				PRODUCT_NAME = Echo;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -637,6 +801,12 @@
 				160494122E6507440073407B /* Debug */,
 				160494132E6507440073407B /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1B0000082E90000000000001 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (1B0000092E90000000000001 /* Debug */, 1B00000A2E90000000000001 /* Release */, );
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};

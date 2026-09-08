@@ -8,3 +8,8 @@ available_in = [ "local" ]
 command = "scripts/run-device.sh"
 default = true
 icon = "smartphone"
+
+[scripts.run.install-mac]
+available_in = [ "local" ]
+command = "scripts/install-mac.sh"
+icon = "package"

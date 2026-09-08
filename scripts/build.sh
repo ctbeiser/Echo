@@ -9,7 +9,11 @@ if [[ $# -gt 0 ]]; then
 fi
 
 project="${PROJECT:-$repo_root/solipsistweets.xcodeproj}"
-scheme="${SCHEME:-solipsistweets}"
+default_scheme=solipsistweets
+if [[ "$platform" == "mac" ]]; then
+  default_scheme=EchoMac
+fi
+scheme="${SCHEME:-$default_scheme}"
 configuration="${CONFIGURATION:-Debug}"
 derived_data_path="${DERIVED_DATA_PATH:-$repo_root/DerivedData}"
 
@@ -28,6 +32,20 @@ args=(
 )
 
 case "$platform" in
+  mac)
+    destination="${MAC_DESTINATION:-platform=macOS}"
+    if [[ "$destination" != "platform=macOS" && "$destination" != "platform=macOS,"* ]]; then
+      echo "error: MAC_DESTINATION must select native macOS." >&2
+      exit 64
+    fi
+    args+=(
+      -destination "$destination"
+      ARCHS="${BUILD_ARCHS:-$(uname -m)}"
+      ONLY_ACTIVE_ARCH="${ONLY_ACTIVE_ARCH:-YES}"
+      CODE_SIGNING_ALLOWED=NO
+      CODE_SIGN_STYLE=Manual
+    )
+    ;;
   simulator)
     destination="${SIMULATOR_DESTINATION:-generic/platform=iOS Simulator}"
     if [[ "$destination" != *"platform=iOS Simulator"* ]]; then
@@ -61,7 +79,7 @@ case "$platform" in
     fi
     ;;
   *)
-    echo "usage: $0 [simulator|device] [xcodebuild action or option ...]" >&2
+    echo "usage: $0 [simulator|device|mac] [xcodebuild action or option ...]" >&2
     exit 64
     ;;
 esac
