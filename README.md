@@ -4,6 +4,12 @@ Echo opens Twitter and Bluesky (through cope.works) with home feeds hidden, star
 
 The `solipsistweets` scheme builds the iPhone/iPad app and its Open in Echo share extension. The `EchoMac` scheme builds a separate native macOS 27+ menu bar app and requires Xcode 27 or newer, for WebKit's built-in pull-to-refresh support.
 
+## iOS sign-in and navigation
+
+On iOS, Echo cancels automatic `x-safari-http:` and `x-safari-https:` requests from embedded pages. X's login page uses these schemes to escape to Safari; translating an automatic request back into the embedded web view makes the login page start the same navigation again in a loop. Explicit main-frame links still map to HTTP(S); Safari requests targeting subframes are canceled instead of replacing the main page. The Home-to-notifications rule remains in place for `/home` and `/i/timeline`, including automatic arrivals. Website redirects do not change the last app-requested URL, so SwiftUI updates cannot replay an earlier request over an in-progress login form.
+
+The login-loop regression can be verified against live X without signing in: open notifications in a fresh iOS simulator, enter dummy text on the login page, and leave it there through screen-time updates and switching away and back. Check that the document and input remain intact without repeated navigation; no credentials need to be submitted.
+
 ## Run on Mac
 
 Choose **Install Mac** from Conductor's Run menu to install and launch `/Applications/Echo.app` without taking focus, or run `scripts/install-mac.sh`. See [the build guide](docs/builds.md) for installation options. For a workspace-only build:

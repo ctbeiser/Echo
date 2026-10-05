@@ -978,6 +978,8 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var parent: WebView
     private let activeTab: SocialTab
     private var didInstallContentRules: Bool = false
+    // Only app requests advance this value; website navigation must not cause
+    // a later SwiftUI update to replay the original request over a login form.
     private var lastProgrammaticRequestURL: URL?
 
     init(parent: WebView, activeTab: SocialTab) {
@@ -1025,16 +1027,20 @@ final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         }
 
         if let mapped = Self.mapSafariBounceURL(url) {
-            webView.load(URLRequest(url: mapped))
             decisionHandler(.cancel)
+            // X's login page automatically tries to escape to Safari. Loading
+            // that URL back into this web view makes it repeat the same request
+            // indefinitely. Only follow an explicit link in the main frame.
+            guard navigationAction.navigationType == .linkActivated,
+                  navigationAction.targetFrame?.isMainFrame != false else { return }
+            webView.load(URLRequest(url: mapped))
             return
         }
 
         if Self.webSchemes.contains(scheme) {
             if shouldRedirectHomeTimelineToNotifications(url) {
-                recordProgrammaticRequest(activeTab.startURL)
-                webView.load(URLRequest(url: activeTab.startURL))
                 decisionHandler(.cancel)
+                webView.load(URLRequest(url: activeTab.startURL))
                 return
             }
             handleHTTPNavigation(url, action: navigationAction, decisionHandler: decisionHandler)

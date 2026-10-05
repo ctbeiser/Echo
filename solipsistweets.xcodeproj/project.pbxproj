@@ -379,7 +379,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -392,7 +392,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.08;
+				MARKETING_VERSION = 1.11;
 				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.OpenInEcho;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -419,7 +419,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -432,7 +432,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.08;
+				MARKETING_VERSION = 1.11;
 				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets.OpenInEcho;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -582,7 +582,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_APP_SANDBOX = YES;
@@ -612,7 +612,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.08;
+				MARKETING_VERSION = 1.11;
 				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -640,7 +640,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = NFZL2NT288;
 				ENABLE_APP_SANDBOX = YES;
@@ -670,7 +670,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.08;
+				MARKETING_VERSION = 1.11;
 				OTHER_SWIFT_FLAGS = "$(inherited) -strict-memory-safety";
 				PRODUCT_BUNDLE_IDENTIFIER = me.whydontyoulove.solipsistweets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
